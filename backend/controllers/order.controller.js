@@ -837,13 +837,26 @@ export const getDeliveryBoyLocation = async (req, res) => {
 export const sendDeliveryOtp = async (req, res) => {
   try {
     const { orderId, shopOrderId } = req.body;
-    const order = await Order.findById(orderId).populate("user");
-    const shopOrder = order?.shopOrders.id(shopOrderId);
+    
+    if (!orderId || !shopOrderId) {
+      return res.status(400).json({ success: false, message: "Order ID and Shop Order ID required" });
+    }
 
-    if (!order || !shopOrder) {
+    const order = await Order.findById(orderId).populate("user");
+    
+    if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    const shopOrder = order.shopOrders.id(shopOrderId);
+
+    if (!shopOrder) {
+      return res.status(404).json({ success: false, message: "Shop order not found" });
+    }
+
+    if (!order.user || !order.user.email) {
+      return res.status(400).json({ success: false, message: "User email not found" });
+    }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
@@ -851,10 +864,21 @@ export const sendDeliveryOtp = async (req, res) => {
     // Save OTP in DB temporarily
     shopOrder.deliveryOtp = otp;
     shopOrder.otpExpiresAt = Date.now() + 5 * 60 * 1000; // 5 min expiry
-    await order.save();   // ✅ parent ko save karo
+    await order.save();
 
-    // Send OTP to user (SMS / Email)
-    await sendOtpToUser(order.user, otp);
+    // Send OTP to user via Email
+    try {
+      await sendOtpToUser(order.user, otp);
+      console.log(`OTP ${otp} sent to ${order.user.email}`);
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError);
+      // Still return success since OTP is saved - user can ask delivery boy to verify manually
+      return res.json({
+        success: true,
+        message: `OTP generated. Email delivery may be delayed.`,
+        otp: process.env.NODE_ENV !== "production" ? otp : undefined // Only show OTP in dev
+      });
+    }
 
     return res.json({
       success: true,
@@ -862,7 +886,7 @@ export const sendDeliveryOtp = async (req, res) => {
     });
   } catch (err) {
     console.error("Send OTP Error:", err);
-    res.status(500).json({ success: false, message: "Failed to send OTP" });
+    res.status(500).json({ success: false, message: `Failed to send OTP: ${err.message}` });
   }
 };
 
