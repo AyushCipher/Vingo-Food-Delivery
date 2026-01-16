@@ -21,19 +21,22 @@ const port = process.env.PORT || 5000
 const frontendUrl = "https://vingo-8134.onrender.com" || "http://localhost:5173"
 const app = express()
 const server = http.createServer(app)
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://vingo-8134.onrender.com",
+  frontendUrl
+].filter(Boolean);
+
 const io = new Server(server,{
   cors: {
-    origin: frontendUrl,
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true  
   }
 })
 
 app.set("io", io);
-const allowedOrigins = [
-  "http://localhost:5173",
-  frontendUrl
-];
 
 app.use(cors({
   origin: allowedOrigins,
