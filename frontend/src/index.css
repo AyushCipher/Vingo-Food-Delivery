@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+/* Pure site ka scrollbar hide karke scroll allow karega */
+* {
+ /* ya scroll */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE/Edge purane versions */
+}
+
+::-webkit-scrollbar, 
+::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+@keyframes scooterMove {
+  0% {
+    transform: translateX(-100px) rotate(-5deg);
+  }
+  50% {
+    transform: translateX(50vw) rotate(3deg);
+  }
+  100% {
+    transform: translateX(110vw) rotate(-2deg);
+  }
+}
+
+.scooter-run {
+  animation: scooterMove 4s ease-in-out infinite;
+}
