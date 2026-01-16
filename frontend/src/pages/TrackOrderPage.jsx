@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { serverUrl } from "../App";
-import UserDeliveryTracking from "../components/UserDeliveryTracking";
+import UserDeliveryTracking from "../components/userDeliveryTracking";
 import { MdKeyboardBackspace, MdLocationOn, MdPhone } from "react-icons/md";
 import { ClipLoader } from "react-spinners";
 import { toast } from "react-toastify";
