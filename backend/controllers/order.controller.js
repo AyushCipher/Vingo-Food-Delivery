@@ -12,6 +12,8 @@ let instance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+
+
 export const placeOrder = async (req, res) => {
   try {
     const { cartItems, address, paymentMethod } = req.body;
@@ -45,7 +47,7 @@ export const placeOrder = async (req, res) => {
 
         const items = groupedByShop[shopId];
         const subtotal = items.reduce(
-          (sum, i) => sum + Number(i.price) * Number(i.quantity), 0);
+          (sum, i) => sum + Number(i.price) * Number(i.quantity),0);
 
         return {
           shop: shop._id,
@@ -64,13 +66,14 @@ export const placeOrder = async (req, res) => {
 
     // Total + Delivery Fee
     let totalAmount = shopOrders.reduce((sum, so) => sum + so.subtotal, 0);
+   
 
-    console.log("Total Amount to charge:", totalAmount);
+    console.log(" Total Amount to charge:", totalAmount);
 
     // Online Payment (Razorpay)
     if (paymentMethod === "online") {
       const razorOrder = await instance.orders.create({
-        amount: Math.round(totalAmount * 100),
+        amount: Math.round(totalAmount * 100), // paise me (integer hona chahiye)
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
       });
@@ -108,6 +111,7 @@ export const placeOrder = async (req, res) => {
     await user.save();
 
     // Fetch fully populated order for socket emission and emails
+    // Fetch fully populated order for socket emission
     const io = req.app.get("io");
     const populatedOrder = await Order.findById(newOrder._id)
       .populate("user", "fullName email mobile")
@@ -116,13 +120,15 @@ export const placeOrder = async (req, res) => {
 
     // Send emails to customer and shop owners
     try {
+      // Send confirmation email to customer
       await sendOrderConfirmationToCustomer(populatedOrder.user, populatedOrder);
       console.log("✅ Customer email sent to:", populatedOrder.user.email);
-
+      
+      // Send notification email to each shop owner
       for (const shopOrder of populatedOrder.shopOrders) {
         const shop = await Shop.findById(shopOrder.shop._id).populate("owner", "fullName email");
         console.log("📦 Shop:", shop?.name, "| Owner:", shop?.owner ? `${shop.owner.fullName} (${shop.owner.email})` : "NOT FOUND");
-
+        
         if (shop && shop.owner && shop.owner.email) {
           await sendOrderNotificationToOwner(shop.owner, populatedOrder, shopOrder);
           console.log("✅ Owner email sent to:", shop.owner.email);
@@ -130,10 +136,11 @@ export const placeOrder = async (req, res) => {
           console.log("⚠️ Skipping - No owner email available");
         }
       }
-
+      
       console.log("✅ All order emails processed");
     } catch (emailError) {
       console.error("⚠️ Failed to send order emails:", emailError.message);
+      console.error("Stack:", emailError.stack);
       // Don't fail the order if email fails
     }
 
@@ -160,6 +167,7 @@ export const placeOrder = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 export const verifyRazorpay = async (req, res) => {
   try {
@@ -215,7 +223,7 @@ export const verifyRazorpay = async (req, res) => {
       console.log("✅ All order emails processed");
     } catch (emailError) {
       console.error("⚠️ Failed to send order emails:", emailError.message);
-      // Don't fail the order if email fails
+      console.error("Stack:", emailError.stack);
     }
 
     // Emit socket events

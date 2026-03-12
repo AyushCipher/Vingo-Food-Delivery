@@ -28,7 +28,6 @@ const userSlice = createSlice({
     totalAmount: initialCart.totalAmount,
     myOrders: [],
     ownerPendingOrders: [],
-    // socket: null, // Removed from Redux state
     deliveryBoys: [],
     searchItems: null,
     pendingOrdersCount: null,

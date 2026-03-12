@@ -19,6 +19,7 @@ function EditReel() {
     const [reel, setReel] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         fetchReel()
@@ -46,6 +47,30 @@ function EditReel() {
             navigate("/my-reels")
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!shop || !reelId) {
+            toast.error("Shop or Reel not found")
+            return
+        }
+        if (!window.confirm("Are you sure you want to delete this reel? This action cannot be undone.")) {
+            return
+        }
+        setDeleting(true)
+        try {
+            await axios.delete(`${serverUrl}/api/reel/delete/${reelId}`, { withCredentials: true })
+            toast.success("Reel deleted successfully!")
+            // Refetch all reels to update the feed
+            const reelsResponse = await axios.get(`${serverUrl}/api/reel/getAll`, { withCredentials: true })
+            dispatch(setReelData(reelsResponse.data))
+            navigate("/my-reels")
+        } catch (error) {
+            console.error(error)
+            toast.error(error.response?.data?.message || "Failed to delete reel")
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -224,6 +249,26 @@ function EditReel() {
                         )}
                     </button>
                 </form>
+
+                {/* Delete Reel Button */}
+                <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className={`w-full bg-red-600 text-white py-3 rounded-lg font-bold text-lg mt-4 flex items-center justify-center gap-2 ${
+                        deleting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700 transition-colors'
+                    }`}
+                >
+                    {deleting ? (
+                        <>
+                            <ClipLoader color="#ffffff" size={20} />
+                            <span>Deleting...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>Delete Reel</span>
+                        </>
+                    )}
+                </button>
             </div>
         </div>
     )

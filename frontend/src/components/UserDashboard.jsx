@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import Nav from "./Nav";
+import UserHomeTabs from "./UserHomeTabs";
 import { categories } from "../category";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import CategoryCard from "./CategoryCard";

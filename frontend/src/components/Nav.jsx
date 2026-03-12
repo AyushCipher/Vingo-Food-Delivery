@@ -6,11 +6,12 @@ import { LuShoppingCart } from "react-icons/lu";
 import { RxCross2 } from "react-icons/rx";
 import axios from "axios";
 import { serverUrl } from "../App";
-import { setSearchItems, setShop, setUserData } from "../redux/userSlice";
+import { setSearchItems, setShop, setUserData, setPendingOrdersCount } from "../redux/userSlice";
 import { FiPlus } from "react-icons/fi";
 import { TbReceipt2 } from "react-icons/tb";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { getSocket } from "../socket"; // add this import
 
 function Nav() {
   // ---- REDUX STATE ----
@@ -75,6 +76,32 @@ function Nav() {
     else dispatch(setSearchItems(null));
   }, [input]);
 
+  // ---- REAL-TIME ORDER COUNT UPDATE ----
+useEffect(() => {
+  if (userData?.role !== "owner") return;
+  const socket = getSocket();
+  if (!socket) return;
+
+  const handleNewOrder = (data) => {
+    if (data.ownerId === userData?._id?.toString()) {
+      console.log("✅ Match! Incrementing count");
+      const current = typeof pendingOrdersCount === "number" ? pendingOrdersCount : 0;
+      dispatch(setPendingOrdersCount(current + 1));
+      toast.info("🛎️ New order received!", {    // ✅ add this
+        position: "top-right",
+        autoClose: 4000,
+      });
+    }
+  };
+
+  socket.on("orders:new", handleNewOrder);
+
+  return () => {
+    socket.off("orders:new", handleNewOrder);
+  };
+}, [userData, pendingOrdersCount]);
+
+
   return (
     <>
       {/* NAVBAR */}
@@ -107,6 +134,7 @@ function Nav() {
             />
           </div>
         )}
+        
 
         {/* RIGHT SECTION */}
         <div className="flex items-center gap-5">

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,7 +10,6 @@ import { ClipLoader } from "react-spinners";
 
 const PRIMARY = "#ff4d2d";
 
-// Marker icons
 const deliveryBoyIcon = new L.Icon({
   iconUrl: scooter,
   iconSize: [40, 40],
@@ -23,19 +22,41 @@ const customerIcon = new L.Icon({
   iconAnchor: [20, 40],
 });
 
-/* ---------------- MAP READY HANDLER ---------------- */
 function MapReadyHandler({ onReady }) {
   const map = useMap();
-  
   useEffect(() => {
-    if (map) {
-      map.whenReady(() => {
-        onReady();
-      });
-    }
+    if (map) map.whenReady(() => onReady());
   }, [map, onReady]);
-  
   return null;
+}
+
+// ✅ Smooth moving marker - updates without re-render
+function MovingMarker({ position, icon, children }) {
+  const markerRef = useRef(null);
+  useEffect(() => {
+    if (markerRef.current && position) {
+      markerRef.current.setLatLng(position);
+    }
+  }, [position]);
+  if (!position) return null;
+  return (
+    <Marker position={position} icon={icon} ref={markerRef}>
+      {children}
+    </Marker>
+  );
+}
+
+// ✅ Calculate distance between two coords in km
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export default function UserDeliveryTracking({ orderId, userLocation, shopOrderId }) {
@@ -43,10 +64,13 @@ export default function UserDeliveryTracking({ orderId, userLocation, shopOrderI
   const [routeCoords, setRouteCoords] = useState([]);
   const [eta, setEta] = useState(null);
   const [distance, setDistance] = useState(null);
-  const [loadingRoute, setLoadingRoute] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // 🔹 Fetch delivery boy location every 5 seconds
+  // Track last location where route was fetched
+  const lastRouteFetchRef = useRef({ lat: null, lng: null });
+  const routeFetchedOnceRef = useRef(false);
+
+  /* ---------- Fetch delivery boy location every 5s ---------- */
   useEffect(() => {
     const fetchLocation = async () => {
       try {
@@ -54,7 +78,6 @@ export default function UserDeliveryTracking({ orderId, userLocation, shopOrderI
           `${serverUrl}/api/order/delivery-location/${orderId}/${shopOrderId}`,
           { withCredentials: true }
         );
-
         if (res.data.success && res.data.deliveryBoyLocation) {
           setDeliveryLoc(res.data.deliveryBoyLocation);
         }
@@ -68,54 +91,53 @@ export default function UserDeliveryTracking({ orderId, userLocation, shopOrderI
     return () => clearInterval(interval);
   }, [orderId, shopOrderId]);
 
-  // 🔹 Fetch route from OSRM when delivery location changes
+  /* ---------- Fetch route ONLY when delivery moves >200m ---------- */
   useEffect(() => {
     if (!deliveryLoc || !userLocation) return;
 
+    const last = lastRouteFetchRef.current;
+    const movedEnough =
+      !routeFetchedOnceRef.current ||
+      (last.lat &&
+        getDistanceKm(last.lat, last.lng, deliveryLoc.lat, deliveryLoc.lng) > 0.2); // 200m threshold
+
+    if (!movedEnough) return; // ✅ skip route recalc if barely moved
+
+    lastRouteFetchRef.current = { lat: deliveryLoc.lat, lng: deliveryLoc.lng };
+    routeFetchedOnceRef.current = true;
+
     const fetchRoute = async () => {
       try {
-        setLoadingRoute(true);
-        
         const url = `https://router.project-osrm.org/route/v1/driving/${deliveryLoc.lng},${deliveryLoc.lat};${userLocation.lng},${userLocation.lat}?overview=full&geometries=geojson`;
-        
         const res = await fetch(url);
         const data = await res.json();
 
         if (data?.routes?.length > 0) {
           const route = data.routes[0];
-
-          // polyline coords
-          const coords = route.geometry.coordinates.map(
-            ([lng, lat]) => [lat, lng]
-          );
+          const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
           setRouteCoords(coords);
-
-          // distance (meters → km)
           setDistance((route.distance / 1000).toFixed(1));
-
-          // duration (seconds → minutes)
           setEta(Math.ceil(route.duration / 60));
         }
       } catch (err) {
         console.error("OSRM route error:", err);
-        // Fallback to straight line if OSRM fails
         setRouteCoords([
           [deliveryLoc.lat, deliveryLoc.lng],
-          [userLocation.lat, userLocation.lng]
+          [userLocation.lat, userLocation.lng],
         ]);
-      } finally {
-        setLoadingRoute(false);
       }
     };
 
     fetchRoute();
-  }, [deliveryLoc?.lat, deliveryLoc?.lng, userLocation?.lat, userLocation?.lng]);
+  }, [deliveryLoc?.lat, deliveryLoc?.lng]);
+
+  const handleMapReady = useCallback(() => setMapReady(true), []);
 
   if (!deliveryLoc) {
     return (
       <div className="w-full h-[400px] rounded-2xl overflow-hidden shadow-md mt-3 flex flex-col items-center justify-center bg-gray-50">
         <ClipLoader size={40} color={PRIMARY} />
-        <p className="mt-3 text-gray-600">Loading map...</p>
+        <p className="mt-3 text-gray-600">Locating delivery partner...</p>
       </div>
     );
   }
@@ -127,15 +149,15 @@ export default function UserDeliveryTracking({ orderId, userLocation, shopOrderI
 
   return (
     <div className="w-full">
-      {/* ETA BAR */}
-      {eta && distance && (
+      {/* ✅ ETA BAR - fixed: eta > 0 prevents rendering "0" */}
+      {eta > 0 && distance > 0 && (
         <div className="mb-2 px-4 py-2 rounded-xl bg-green-50 text-green-700 font-semibold text-sm flex items-center gap-2">
-          📦 Estimated delivery in around {eta} mins :- {distance} km away
+          📦 Estimated delivery in around {eta} mins · {distance} km away
         </div>
       )}
 
       <div className="w-full h-[400px] rounded-2xl overflow-hidden shadow-md relative">
-        {/* Loading spinner overlay */}
+        {/* Loading map spinner */}
         {!mapReady && (
           <div className="absolute inset-0 z-[1000] bg-white flex flex-col items-center justify-center">
             <ClipLoader size={45} color={PRIMARY} />
@@ -144,41 +166,32 @@ export default function UserDeliveryTracking({ orderId, userLocation, shopOrderI
         )}
 
         <MapContainer center={center} zoom={14} style={{ height: "100%", width: "100%" }}>
-          <MapReadyHandler onReady={() => setMapReady(true)} />
-          
-          <TileLayer 
+          <MapReadyHandler onReady={handleMapReady} />
+          <TileLayer
             attribution="© OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {/* 🔹 Delivery boy marker */}
-          <Marker position={[deliveryLoc.lat, deliveryLoc.lng]} icon={deliveryBoyIcon}>
+          {/* ✅ Smooth moving delivery boy marker */}
+          <MovingMarker
+            position={[deliveryLoc.lat, deliveryLoc.lng]}
+            icon={deliveryBoyIcon}
+          >
             <Popup>Delivery Boy</Popup>
-          </Marker>
+          </MovingMarker>
 
-          {/* 🔹 User marker */}
+          {/* Customer marker */}
           <Marker position={[userLocation.lat, userLocation.lng]} icon={customerIcon}>
             <Popup>Your Address</Popup>
           </Marker>
 
-          {/* 🔹 Route line - now uses road path from OSRM */}
+          {/* Route */}
           {routeCoords.length > 0 && (
-            <Polyline 
-              positions={routeCoords} 
-              color="#2563eb" 
-              weight={5} 
-              opacity={0.9}
-            />
+            <Polyline positions={routeCoords} color="#2563eb" weight={5} opacity={0.9} />
           )}
         </MapContainer>
 
-        {/* Route calculation overlay */}
-        {mapReady && loadingRoute && (
-          <div className="absolute inset-0 z-[999] bg-white/70 flex flex-col items-center justify-center">
-            <ClipLoader size={35} color={PRIMARY} />
-            <p className="mt-2 text-gray-600 font-medium text-sm">Calculating route...</p>
-          </div>
-        )}
+        {/* ✅ Removed "Calculating route" overlay entirely - no more flicker */}
       </div>
     </div>
   );

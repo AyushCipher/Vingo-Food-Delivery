@@ -273,7 +273,7 @@ export default function DeliveryBoy() {
                 <span className="hidden sm:inline">My Payments</span>
               </button>
             </div>
-            {location.lat && (
+            {!!location.lat && (
               <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                 <MdLocationOn />
                 {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
@@ -314,7 +314,7 @@ export default function DeliveryBoy() {
             <div className="bg-white rounded-3xl p-6 shadow-sm border">
               <h2 className="font-bold text-lg mb-2">🚴 Current Order</h2>
               <p className="text-sm text-gray-600 mb-3">
-                {currentOrder.shopOrder.shop?.name}
+                {currentOrder.shopOrder?.shop?.name || ""}
               </p>
 
               <DeliveryBoyTracking currentOrder={currentOrder} />

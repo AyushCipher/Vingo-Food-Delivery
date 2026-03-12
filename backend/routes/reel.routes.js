@@ -23,7 +23,7 @@ reelRouter.get("/like/:reelId", isAuth, likeReel);
 reelRouter.post("/comment/:reelId", isAuth, commentReel);
 reelRouter.post("/reply/:reelId/:commentId", isAuth, replyToComment);
 reelRouter.put("/edit/:reelId", isAuth, editReel);
-reelRouter.delete("/:reelId", isAuth, deleteReel);
+reelRouter.delete("/delete/:reelId", isAuth, deleteReel);  // ✅ fixed
 reelRouter.get("/save/:reelId", isAuth, saveReel);
 reelRouter.get("/saved", isAuth, getSavedReels);
 
