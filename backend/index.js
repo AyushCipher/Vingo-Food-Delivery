@@ -31,7 +31,7 @@ const server = http.createServer(app)
 // Allowed origins for CORS - includes both dev and production URLs
 const allowedOrigins = [
   "http://localhost:5173",
-  process.env.FRONTEND_URL
+  "https://vingo-8134.onrender.com"
 ].filter(Boolean);
 
 const io = new Server(server,{
@@ -66,5 +66,4 @@ server.listen(port,()=>{
   console.log(`Server started at port no. ${port}`)
   connectDb()
 })
-
 

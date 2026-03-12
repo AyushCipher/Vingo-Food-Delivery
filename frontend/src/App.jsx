@@ -11,6 +11,7 @@ import getAllShops from './hooks/getAllShops'
 import EditShop from './pages/EditShop'
 import { setShop } from './redux/userSlice'
 import getCurrentShop from './hooks/getCurrentShop'
+import DeliveryBoy from './components/DeliveryBoy'
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -43,7 +44,7 @@ import DeliveryBoyPayment from './pages/DeliveryBoyPayment';
 // Use Vite's built-in env detection - import.meta.env.DEV is true in development
 export const serverUrl = import.meta.env.DEV 
   ? "http://localhost:8000" 
-  : import.meta.env.VITE_SERVER_URL
+  : "https://vingo-backend-194r.onrender.com"
 
 
 
@@ -91,6 +92,8 @@ function App() {
         <Route path="/saved-loops" element={userData ? <SavedLoops /> : <Navigate to="/signin" />} />
         <Route path="/product/:itemId" element={userData ? <ProductDetails /> : <Navigate to="/signin" />} />
         <Route path="/delivery-payment" element={userData ? <DeliveryBoyPayment /> : <Navigate to="/signin" />} />
+        <Route path="/delivery" element={userData ? <DeliveryBoy /> : <Navigate to="/signin" />} />
+
 
         {/* 404 Route - must be last */}
         <Route path="*" element={<NotFound />} />
