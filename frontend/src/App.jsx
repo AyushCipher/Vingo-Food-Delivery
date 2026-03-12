@@ -9,7 +9,7 @@ import Home from './pages/Home'
 import getCity from './hooks/getCity'
 import getAllShops from './hooks/getAllShops'
 import EditShop from './pages/EditShop'
-import { setShop, setSocket } from './redux/userSlice'
+import { setShop } from './redux/userSlice'
 import getCurrentShop from './hooks/getCurrentShop'
 
 import { ToastContainer } from "react-toastify";
@@ -25,7 +25,7 @@ import OrderPlaced from './pages/OrderPlaced'
 import MyOrders from './pages/MyOrders'
 import getOwnerPendingOrders from './hooks/getOwnerPendingOrders'
 import PendingOrders from './pages/PendingOrders'
-import { io } from 'socket.io-client'
+import { getSocket } from './socket'
 import updateLocation from './hooks/updateLocation'
 import TrackOrderPage from './pages/TrackOrderPage'
 import MyDeliveredOrders from './pages/MyDeliveredOrders'
@@ -39,40 +39,23 @@ export const serverUrl = import.meta.env.DEV
   : "https://vingo-food-delivery-zvzq.onrender.com"
 
 
+
 function App() {
-  const {userData, allShops, socket} = useSelector(state => state.user)
- 
+  const { userData } = useSelector(state => state.user);
+
   getCurrentUser();
   getCity();
   getCurrentShop();
-  useGetShopsByCity(); 
+  useGetShopsByCity();
   getItemsByCity();
-  getOwnerPendingOrders()
-  updateLocation()
-  
-  const dispatch = useDispatch()
+  getOwnerPendingOrders();
+  updateLocation();
 
+  // Initialize socket singleton
   useEffect(() => {
-    const socketInstance = io(serverUrl, { withCredentials: true });
-    dispatch(setSocket(socketInstance));
-
-    socketInstance.on("connect", () => {
-      console.log("Socket connected:", socketInstance.id);
-      if (userData?._id) {
-        console.log("Emitting identify for user:", userData._id);
-        socketInstance.emit("identify", { userId: userData._id });
-      }
-    });
-
-    // Also emit identify when userData becomes available after socket is connected
-    if (socketInstance.connected && userData?._id) {
-      console.log("Re-emitting identify for user:", userData._id);
-      socketInstance.emit("identify", { userId: userData._id });
+    if (userData?._id) {
+      getSocket(userData._id);
     }
-
-    return () => {
-      socketInstance.disconnect();
-    };
   }, [userData?._id]);
 
   return (

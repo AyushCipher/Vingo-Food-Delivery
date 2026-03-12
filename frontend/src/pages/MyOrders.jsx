@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { getSocket } from "../socket";
 import { MdKeyboardBackspace } from "react-icons/md";
 import { ClipLoader } from "react-spinners";
 import { toast } from "react-toastify";
@@ -58,7 +59,6 @@ const getOverallStatus = (shopOrders = []) => {
   return "pending";
 };
 
-// Format status for display
 const formatStatus = (status) => {
   const map = {
     pending: "Pending",
@@ -71,10 +71,11 @@ const formatStatus = (status) => {
   return map[status] || capitalizeFirst(status);
 };
 
-/* ================================================= */
 
-export default function MyOrders() {
-  const { myOrders, socket } = useSelector((state) => state.user);
+
+
+function MyOrders() {
+  const { myOrders, userData } = useSelector((state) => state.user);
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -106,33 +107,14 @@ export default function MyOrders() {
     fetchOrders();
   }, [dispatch]);
 
+
+
   /* ---------------- Socket Updates ---------------- */
   useEffect(() => {
-    if (!socket) return;
+    if (!userData?._id) return;
+    const socket = getSocket(userData._id);
 
     const handleStatusUpdate = async (data) => {
-      console.log("📦 Socket received status update:", data);
-      
-      // Re-fetch orders to get fresh data (avoids stale closure issues)
-      try {
-        const res = await axios.get(`${serverUrl}/api/order/getmy`, {
-          withCredentials: true,
-        });
-        if (res.data.success) {
-          dispatch(setMyOrders(res.data.orders));
-        }
-      } catch (err) {
-        console.error("Failed to refresh orders:", err);
-      }
-
-      toast.info("Order status updated", {
-        position: "top-right",
-      });
-    };
-
-    const handleDeliveryCompleted = async (data) => {
-      console.log("✅ Socket received delivery completed:", data);
-      
       // Re-fetch orders to get fresh data
       try {
         const res = await axios.get(`${serverUrl}/api/order/getmy`, {
@@ -144,10 +126,21 @@ export default function MyOrders() {
       } catch (err) {
         console.error("Failed to refresh orders:", err);
       }
+      toast.info("Order status updated", { position: "top-right" });
+    };
 
-      toast.success("🎉 Order delivered successfully!", {
-        position: "top-right",
-      });
+    const handleDeliveryCompleted = async (data) => {
+      try {
+        const res = await axios.get(`${serverUrl}/api/order/getmy`, {
+          withCredentials: true,
+        });
+        if (res.data.success) {
+          dispatch(setMyOrders(res.data.orders));
+        }
+      } catch (err) {
+        console.error("Failed to refresh orders:", err);
+      }
+      toast.success("🎉 Order delivered successfully!", { position: "top-right" });
     };
 
     socket.on("orders:statusUpdated", handleStatusUpdate);
@@ -157,7 +150,9 @@ export default function MyOrders() {
       socket.off("orders:statusUpdated", handleStatusUpdate);
       socket.off("delivery:completed", handleDeliveryCompleted);
     };
-  }, [socket, dispatch]);
+  }, [userData?._id, dispatch]);
+
+
 
   /* ---------------- Loading ---------------- */
   if (loading) {
@@ -171,55 +166,53 @@ export default function MyOrders() {
     );
   }
 
+
+
   /* ---------------- Empty Orders ---------------- */
-if (myOrders?.length === 0) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fff1eb] via-[#fff9f6] to-[#ffe5dd] px-4">
-      
-      {/* Card */}
-      <div className="bg-white rounded-3xl shadow-xl max-w-md w-full text-center px-8 py-10 relative overflow-hidden">
-
-        {/* Decorative blur */}
-        <div className="absolute -top-24 -right-24 w-56 h-56 bg-orange-200 rounded-full blur-3xl opacity-40" />
-        <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-pink-200 rounded-full blur-3xl opacity-40" />
-
-        {/* Illustration */}
-        <div className="relative z-10">
-          <div className="w-28 h-28 mx-auto mb-6 rounded-full bg-orange-50 flex items-center justify-center">
-            <img
-              src="https://cdni.iconscout.com/illustration/premium/thumb/no-orders-yet-illustration-svg-download-png-13391228.png"
-              alt="No orders"
-              className="w-16 h-16 opacity-90"
-            />
+  if (myOrders?.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fff1eb] via-[#fff9f6] to-[#ffe5dd] px-4">
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-xl max-w-md w-full text-center px-8 py-10 relative overflow-hidden">
+          {/* Decorative blur */}
+          <div className="absolute -top-24 -right-24 w-56 h-56 bg-orange-200 rounded-full blur-3xl opacity-40" />
+          <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-pink-200 rounded-full blur-3xl opacity-40" />
+          {/* Illustration */}
+          <div className="relative z-10">
+            <div className="w-28 h-28 mx-auto mb-6 rounded-full bg-orange-50 flex items-center justify-center">
+              <img
+                src="https://cdni.iconscout.com/illustration/premium/thumb/no-orders-yet-illustration-svg-download-png-13391228.png"
+                alt="No orders"
+                className="w-16 h-16 opacity-90"
+              />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">
+              No Orders Yet
+            </h2>
+            <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto mb-8">
+              You haven’t placed any orders yet.  
+              Start shopping and your delicious orders will appear here.
+            </p>
+            <button
+              onClick={() => navigate("/")}
+              className="inline-flex items-center justify-center
+                         bg-gradient-to-r from-[#ff4d2d] to-[#ff6a3d]
+                         hover:from-[#e64526] hover:to-[#ff4d2d]
+                         text-white px-10 py-3 rounded-2xl
+                         font-semibold shadow-lg
+                         transition-all duration-300 hover:scale-[1.02]"
+            >
+              Start Shopping
+            </button>
           </div>
-
-          <h2 className="text-3xl font-bold text-gray-800 mb-3">
-            No Orders Yet
-          </h2>
-
-          <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto mb-8">
-            You haven’t placed any orders yet.  
-            Start shopping and your delicious orders will appear here.
-          </p>
-
-          <button
-            onClick={() => navigate("/")}
-            className="inline-flex items-center justify-center
-                       bg-gradient-to-r from-[#ff4d2d] to-[#ff6a3d]
-                       hover:from-[#e64526] hover:to-[#ff4d2d]
-                       text-white px-10 py-3 rounded-2xl
-                       font-semibold shadow-lg
-                       transition-all duration-300 hover:scale-[1.02]"
-          >
-            Start Shopping
-          </button>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 
+
+  
   /* ---------------- Main UI ---------------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fff1eb] to-[#fff9f6] flex justify-center px-4 py-8">
@@ -257,18 +250,33 @@ if (myOrders?.length === 0) {
                   </div>
 
                   <div className="text-right space-y-1">
-                    <p className="text-sm text-gray-500">
-                      Payment:{" "}
-                      <span className="font-medium text-gray-800">
-                        {order.paymentMethod.toUpperCase()}
-                      </span>
-                    </p>
-                    <span
-                      className={`inline-block text-xs font-semibold px-3 py-1 rounded-full border ${statusStyle(
-                        overallStatus
-                      )}`}
-                    >
-                      {formatStatus(overallStatus)}
+                    {/* Payment Status (real-time, like PendingOrders.jsx) */}
+                    <span className="text-xs font-semibold">
+                      Payment Status: {order.shopOrders[0]?.status === "delivered" ? (
+                        order.paymentMethod === "online" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                            Online <span className="ml-1">&#10003;</span>
+                          </span>
+                        ) : order.paymentMethod === "cod" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                            COD <span className="ml-1">&#10003;</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )
+                      ) : (
+                        order.paymentMethod === "online" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                            Online
+                          </span>
+                        ) : order.paymentMethod === "cod" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold border border-red-300">
+                            False
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )
+                      )}
                     </span>
                   </div>
                 </div>
@@ -360,3 +368,6 @@ if (myOrders?.length === 0) {
     </div>
   );
 }
+
+export default MyOrders;
+

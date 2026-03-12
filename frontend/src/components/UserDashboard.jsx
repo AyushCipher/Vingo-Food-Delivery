@@ -4,15 +4,17 @@ import { categories } from "../category";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import CategoryCard from "./CategoryCard";
 import FoodCard from "./FoodCard";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import ClipLoader from "react-spinners/ClipLoader";
 import { toast } from "react-toastify";
+import { getSocket } from "../socket";
 
 function UserDashboard() {
   const { city, shopsOfCity, itemsOfCity, searchItems } = useSelector(
     (state) => state.user
   );
+  const dispatch = useDispatch();
 
   const navigate = useNavigate();
 
@@ -73,11 +75,10 @@ function UserDashboard() {
   // ---------- ITEMS FETCH WATCH ----------
   useEffect(() => {
     if (itemsOfCity === null) return;
-
     setLoadingItems(false);
     setItemsFetched(true);
-    setUpdatedItems(itemsOfCity);
-
+    // Only show available items
+    setUpdatedItems(itemsOfCity.filter(item => item.availability !== false));
     if (itemsFetched && itemsOfCity.length === 0) {
       toast.error("No food items available in this city", {
         position: "top-right",
@@ -104,6 +105,35 @@ function UserDashboard() {
       shop?.removeEventListener("scroll", updateShop);
     };
   }, []);
+
+  // ---------- SOCKET LISTENER ----------
+  useEffect(() => {
+    const socket = getSocket();
+    const handleAvailabilityUpdate = (data) => {
+      if (!city || data.city !== city) return;
+      // Update local state for UI
+      setUpdatedItems((prev) =>
+        prev.map((item) =>
+          item._id === data.itemId
+            ? { ...item, availability: data.availability }
+            : item
+        )
+      );
+      // Update Redux state for itemsOfCity
+      dispatch({
+        type: "user/setItemsOfCity",
+        payload: itemsOfCity.map((item) =>
+          item._id === data.itemId
+            ? { ...item, availability: data.availability }
+            : item
+        ),
+      });
+    };
+    socket.on("item:availabilityUpdated", handleAvailabilityUpdate);
+    return () => {
+      socket.off("item:availabilityUpdated", handleAvailabilityUpdate);
+    };
+  }, [city, itemsOfCity, dispatch]);
 
   return (
     <div className="w-screen min-h-screen flex flex-col gap-6 items-center bg-[#fff9f6]">

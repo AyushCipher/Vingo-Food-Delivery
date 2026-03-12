@@ -122,7 +122,7 @@ function Nav() {
           {userData?.role === "owner" && (
             <>
               {/* DESKTOP BUTTONS */}
-              <div className="hidden md:flex items-center gap-7 ml-5">
+              <div className="hidden md:flex items-center gap-7 ">
                 {/* ADD FOOD BUTTON — only if shop exists */}
                 {myShopData && (
                   <button

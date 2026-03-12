@@ -22,6 +22,7 @@ export default function EditItem() {
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
   const [description, setDescription] = useState("");
+  const [availability, setAvailability] = useState(true);
 
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +53,7 @@ export default function EditItem() {
       formData.append("type", type);
       formData.append("category", category);
       formData.append("description", description);
+      formData.append("availability", availability);
 
       if (backendImage) {
         formData.append("image", backendImage);
@@ -130,6 +132,7 @@ export default function EditItem() {
       setCategory(selectedItem.category);
       setType(selectedItem.type);
       setDescription(selectedItem.description || "");
+      setAvailability(selectedItem.availability !== false);
     }
   }, [selectedItem]);
 
@@ -155,6 +158,9 @@ export default function EditItem() {
 
 
         <form onSubmit={handleSubmit} className="space-y-5">
+
+          
+
 
           <div>
             <label className="block text-gray-700 font-medium mb-1">Name</label>
@@ -241,6 +247,19 @@ export default function EditItem() {
               rows={3}
               className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#ff4d2d] outline-none resize-none"
             />
+          </div>
+
+          {/* Availability */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Availability</label>
+            <select
+              value={availability ? "true" : "false"}
+              onChange={e => setAvailability(e.target.value === "true")}
+              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-[#ff4d2d] outline-none"
+            >
+              <option value="true">Available</option>
+              <option value="false">Unavailable</option>
+            </select>
           </div>
 
 

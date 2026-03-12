@@ -1,125 +1,89 @@
-import axios from "axios";
-import React, { useState } from "react";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
-import { serverUrl } from "../App";
-import { useDispatch } from "react-redux";
-import { setShop } from "../redux/userSlice";
-import { toast } from "react-toastify";
-import ClipLoader from "react-spinners/ClipLoader";
 
-export default function OwnerFoodCard({ item }) {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+export default function OwnerFoodCard({ order }) {
+  // order: { _id, user, address, paymentMethod, createdAt, shopOrder }
+  if (!order || !order.shopOrder) return null;
 
-  const [loading, setLoading] = useState(false);
+  const { user, address, paymentMethod, createdAt, shopOrder } = order;
 
-  const handleDelete = async () => {
-    try {
-      setLoading(true);
 
-      const result = await axios.get(
-        `${serverUrl}/api/item/delete/${item._id}`,
-        { withCredentials: true }
-      );
-
-      dispatch(setShop(result.data.shop));
-
-      toast.success(result?.data?.message || "Item deleted successfully", {
-        position: "top-right",
-      });
-
-    } catch (error) {
-
-      toast.error(
-        error?.response?.data?.message ||
-        "Failed to delete item. Please try again.",
-        { position: "top-right" }
-      );
-
-      console.log(error);
-
-    } finally {
-      setLoading(false);
+  // Payment status logic
+  let paymentStatus = "-";
+  let paymentClass = "text-gray-600 font-semibold";
+  if (paymentMethod === "online") {
+    paymentStatus = "Online";
+    paymentClass = "text-green-600 font-semibold";
+  } else if (paymentMethod === "cod") {
+    if (shopOrder.status === "delivered") {
+      paymentStatus = <span className="text-green-600 font-semibold">COD <span className="ml-1">✅</span></span>;
+    } else {
+      paymentStatus = <span className="text-red-600 font-semibold">False</span>;
     }
-  };
-
+  }
 
   return (
     <div className="flex bg-white rounded-lg shadow-md overflow-hidden border border-[#ff4d2d] w-full max-w-2xl">
-
       {/* IMAGE */}
       <div className="w-36 flex-shrink-0 bg-gray-50">
-        <img
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-cover"
-        />
+        {shopOrder.items[0]?.item?.image ? (
+          <img
+            src={shopOrder.items[0].item.image}
+            alt={shopOrder.items[0].item.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">No Image</div>
+        )}
       </div>
 
       {/* CONTENT */}
       <div className="flex flex-col justify-between p-3 flex-1">
-
         <div>
           <h3 className="text-base font-semibold text-[#ff4d2d]">
-            {item.name}
+            Order #{order._id.slice(-6)}
           </h3>
+          <p className="text-xs text-gray-500 mb-1">{new Date(createdAt).toLocaleString()}</p>
 
-          <p className="text-gray-600 text-sm mt-1 line-clamp-2">
-            {item.description}
-          </p>
+          {/* User Info */}
+          <div className="text-xs text-gray-700 mb-2">
+            <span className="font-medium">Customer:</span> {user?.fullName || "N/A"} <br />
+            <span className="font-medium">Mobile:</span> {user?.mobile || "N/A"}
+          </div>
 
+          {/* Address */}
+          {address?.text && (
+            <div className="text-xs text-gray-600 mb-2">
+              <span className="font-medium">Address:</span> {address.text}
+            </div>
+          )}
+
+
+          {/* Payment Status */}
+          <div className="text-xs mb-2">
+            <span className="font-medium text-gray-700">Payment Status:</span>{" "}
+            {paymentMethod === "cod" && shopOrder.status === "delivered"
+              ? paymentStatus
+              : <span className={paymentClass}>{typeof paymentStatus === "string" ? paymentStatus : null}</span>}
+          </div>
+
+          {/* Items */}
           <div className="mt-2 text-xs text-gray-500 space-y-1">
-            <p>
-              <span className="font-medium text-gray-700">Category:</span>{" "}
-              {item.category || "N/A"}
-            </p>
-
-            <p>
-              <span className="font-medium text-gray-700">Type:</span>{" "}
-              {item.type === "veg"
-                ? "Veg"
-                : item.type === "non veg"
-                ? "Non Veg"
-                : "N/A"}
-            </p>
-
-            <p>
-              <span className="font-medium text-gray-700">Availability:</span>{" "}
-              {item.availability ? (
-                <span className="text-green-600 font-semibold">Available</span>
-              ) : (
-                <span className="text-red-600 font-semibold">Not Available</span>
-              )}
-            </p>
+            <span className="font-medium text-gray-700">Items:</span>
+            <ul className="list-disc ml-5">
+              {shopOrder.items.map((it, idx) => (
+                <li key={idx}>
+                  {it.item?.name || "Item"} × {it.quantity} @ ₹{it.price}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        {/* PRICE + ACTIONS */}
+        {/* Subtotal */}
         <div className="flex items-center justify-between mt-2">
           <span className="text-[#ff4d2d] font-bold">
-            ₹{item.price}
+            Subtotal: ₹{shopOrder.subtotal}
           </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/edititem/${item._id}`)}
-              className="p-2 rounded-full hover:bg-[#ff4d2d]/10 text-[#ff4d2d]"
-              disabled={loading}
-            >
-              <FiEdit size={16} />
-            </button>
-
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="p-2 rounded-full hover:bg-[#ff4d2d]/10 text-[#ff4d2d] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {loading ? <ClipLoader size={16} color="#ff4d2d" /> : <FiTrash2 size={16} />}
-            </button>
-          </div>
         </div>
-
       </div>
     </div>
   );

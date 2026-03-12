@@ -10,15 +10,15 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL,
     pass: process.env.EMAIL_PASS,
   },
-  debug: true,
-  logger: true
+  // Disable debug logging to reduce console clutter
+  // debug: true,
+  // logger: true
 });
 
-// Verify transporter on startup
+// Verify transporter on startup (optional - can be commented out if causing issues)
 transporter.verify((error, success) => {
   if (error) {
     console.error("❌ Email transporter verification failed:", error.message);
-    console.error("Check EMAIL and EMAIL_PASS environment variables");
   } else {
     console.log("✅ Email server is ready to send messages");
   }

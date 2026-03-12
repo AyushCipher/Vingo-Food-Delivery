@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { addToCart, updateQuantity, updateItemRating } from "../redux/userSlice";
+import {
+  addToCart,
+  updateQuantity,
+  updateItemRating,
+} from "../redux/userSlice";
 import { serverUrl } from "../App";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
@@ -86,7 +90,7 @@ function ProductDetails() {
       try {
         const res = await axios.get(
           `${serverUrl}/api/review/can-review/${itemId}`,
-          { withCredentials: true }
+          { withCredentials: true },
         );
         setCanReview(res.data.canReview);
         setHasReviewed(res.data.hasReviewed);
@@ -108,7 +112,7 @@ function ProductDetails() {
         setReviewsLoading(true);
         const res = await axios.get(
           `${serverUrl}/api/review/item/${itemId}?sort=${reviewSort}`,
-          { withCredentials: true }
+          { withCredentials: true },
         );
         setReviews(res.data.reviews);
         setTotalReviews(res.data.totalReviews);
@@ -146,7 +150,7 @@ function ProductDetails() {
           quantity,
           image: item.image,
           type: item.type,
-        })
+        }),
       );
       toast.success(`${item.name} added to cart!`);
     }
@@ -160,13 +164,13 @@ function ProductDetails() {
 
     try {
       setSubmittingReview(true);
-      
+
       if (editingReview && userReview) {
         // Update existing review
         const res = await axios.put(
           `${serverUrl}/api/review/update/${userReview._id}`,
           { rating: newRating, review: newReview },
-          { withCredentials: true }
+          { withCredentials: true },
         );
         toast.success("Review updated successfully!");
         setUserReview(res.data.review);
@@ -175,7 +179,7 @@ function ProductDetails() {
         const res = await axios.post(
           `${serverUrl}/api/review/add/${itemId}`,
           { rating: newRating, review: newReview },
-          { withCredentials: true }
+          { withCredentials: true },
         );
         toast.success("Review added successfully!");
         setHasReviewed(true);
@@ -186,23 +190,28 @@ function ProductDetails() {
       // Refresh reviews
       const reviewsRes = await axios.get(
         `${serverUrl}/api/review/item/${itemId}?sort=${reviewSort}`,
-        { withCredentials: true }
+        { withCredentials: true },
       );
       setReviews(reviewsRes.data.reviews);
       setTotalReviews(reviewsRes.data.totalReviews);
       setRatingDistribution(reviewsRes.data.ratingDistribution);
 
       // Refresh item to get updated rating
-      const itemRes = await axios.get(`${serverUrl}/api/item/getbyid/${itemId}`, {
-        withCredentials: true,
-      });
+      const itemRes = await axios.get(
+        `${serverUrl}/api/item/getbyid/${itemId}`,
+        {
+          withCredentials: true,
+        },
+      );
       setItem(itemRes.data);
-      
+
       // Update Redux state for home page
-      dispatch(updateItemRating({
-        itemId: itemId,
-        rating: itemRes.data.rating
-      }));
+      dispatch(
+        updateItemRating({
+          itemId: itemId,
+          rating: itemRes.data.rating,
+        }),
+      );
 
       setShowReviewForm(false);
       setEditingReview(false);
@@ -233,23 +242,28 @@ function ProductDetails() {
       // Refresh reviews
       const reviewsRes = await axios.get(
         `${serverUrl}/api/review/item/${itemId}?sort=${reviewSort}`,
-        { withCredentials: true }
+        { withCredentials: true },
       );
       setReviews(reviewsRes.data.reviews);
       setTotalReviews(reviewsRes.data.totalReviews);
       setRatingDistribution(reviewsRes.data.ratingDistribution);
 
       // Refresh item
-      const itemRes = await axios.get(`${serverUrl}/api/item/getbyid/${itemId}`, {
-        withCredentials: true,
-      });
+      const itemRes = await axios.get(
+        `${serverUrl}/api/item/getbyid/${itemId}`,
+        {
+          withCredentials: true,
+        },
+      );
       setItem(itemRes.data);
-      
+
       // Update Redux state for home page
-      dispatch(updateItemRating({
-        itemId: itemId,
-        rating: itemRes.data.rating
-      }));
+      dispatch(
+        updateItemRating({
+          itemId: itemId,
+          rating: itemRes.data.rating,
+        }),
+      );
     } catch (error) {
       console.error("Error deleting review:", error);
       toast.error("Failed to delete review");
@@ -269,12 +283,14 @@ function ProductDetails() {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
         stars.push(<FaStar key={i} className={`text-yellow-400 ${size}`} />);
       } else if (i === fullStars + 1 && hasHalfStar) {
-        stars.push(<FaStarHalfAlt key={i} className={`text-yellow-400 ${size}`} />);
+        stars.push(
+          <FaStarHalfAlt key={i} className={`text-yellow-400 ${size}`} />,
+        );
       } else {
         stars.push(<FaRegStar key={i} className={`text-yellow-400 ${size}`} />);
       }
@@ -327,7 +343,9 @@ function ProductDetails() {
       <div className="min-h-screen bg-gray-50">
         <Nav />
         <div className="flex flex-col justify-center items-center h-[60vh]">
-          <h2 className="text-2xl font-bold text-gray-700">Product not found</h2>
+          <h2 className="text-2xl font-bold text-gray-700">
+            Product not found
+          </h2>
           <button
             onClick={() => navigate(-1)}
             className="mt-4 px-6 py-2 bg-[#ff4d2d] text-white rounded-lg hover:bg-[#e63e1f]"
@@ -345,7 +363,7 @@ function ProductDetails() {
     <div className="min-h-screen bg-gray-50">
       <Nav />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 mt-5">
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
@@ -367,13 +385,13 @@ function ProductDetails() {
                   className="w-full h-full object-cover"
                 />
                 {/* Items Button - Top Left */}
-<button
-  onClick={() => navigate(-1)}
-  className="absolute top-4 left-4 p-2 text-[#ff4d2d] hover:scale-110 transition-transform"
-  aria-label="Go back"
->
-  <MdKeyboardBackspace size={26} />
-</button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="absolute top-4 left-4 p-2 text-[#ff4d2d] hover:scale-110 transition-transform"
+                  aria-label="Go back"
+                >
+                  <MdKeyboardBackspace size={26} />
+                </button>
                 {/* Veg/Non-Veg Badge */}
                 <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg">
                   {item.type === "veg" ? (
@@ -431,7 +449,8 @@ function ProductDetails() {
                   {renderStars(item.rating?.average || 0)}
                 </div>
                 <span className="text-gray-600">
-                  {item.rating?.average?.toFixed(1) || "0.0"} ({item.rating?.count || 0} reviews)
+                  {item.rating?.average?.toFixed(1) || "0.0"} (
+                  {item.rating?.count || 0} reviews)
                 </span>
               </div>
 
@@ -442,34 +461,45 @@ function ProductDetails() {
 
               {/* Description */}
               <p className="text-gray-600 leading-relaxed">
-                {item.description || "Delicious food item prepared with fresh ingredients and love."}
+                {item.description ||
+                  "Delicious food item prepared with fresh ingredients and love."}
               </p>
 
               {/* Nutrition Info */}
               {item.nutritionInfo && item.nutritionInfo.calories > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Nutrition Info:</h3>
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Nutrition Info:
+                  </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-gray-50 p-3 rounded-lg text-center">
                       <p className="text-sm text-gray-500">Calories</p>
-                      <p className="font-bold text-gray-800">{item.nutritionInfo.calories}</p>
+                      <p className="font-bold text-gray-800">
+                        {item.nutritionInfo.calories}
+                      </p>
                     </div>
                     {item.nutritionInfo.protein && (
                       <div className="bg-gray-50 p-3 rounded-lg text-center">
                         <p className="text-sm text-gray-500">Protein</p>
-                        <p className="font-bold text-gray-800">{item.nutritionInfo.protein}</p>
+                        <p className="font-bold text-gray-800">
+                          {item.nutritionInfo.protein}
+                        </p>
                       </div>
                     )}
                     {item.nutritionInfo.carbs && (
                       <div className="bg-gray-50 p-3 rounded-lg text-center">
                         <p className="text-sm text-gray-500">Carbs</p>
-                        <p className="font-bold text-gray-800">{item.nutritionInfo.carbs}</p>
+                        <p className="font-bold text-gray-800">
+                          {item.nutritionInfo.carbs}
+                        </p>
                       </div>
                     )}
                     {item.nutritionInfo.fat && (
                       <div className="bg-gray-50 p-3 rounded-lg text-center">
                         <p className="text-sm text-gray-500">Fat</p>
-                        <p className="font-bold text-gray-800">{item.nutritionInfo.fat}</p>
+                        <p className="font-bold text-gray-800">
+                          {item.nutritionInfo.fat}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -485,7 +515,9 @@ function ProductDetails() {
                   >
                     <FaMinus className="text-gray-600" />
                   </button>
-                  <span className="text-xl font-bold w-8 text-center">{quantity}</span>
+                  <span className="text-xl font-bold w-8 text-center">
+                    {quantity}
+                  </span>
                   <button
                     onClick={handleIncrease}
                     className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
@@ -722,7 +754,9 @@ function ProductDetails() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+              <p className="text-gray-500">
+                No reviews yet. Be the first to review!
+              </p>
             </div>
           )}
         </div>

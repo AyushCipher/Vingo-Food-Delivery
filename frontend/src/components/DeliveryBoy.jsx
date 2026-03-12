@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { MdLocationOn, MdOutlineCheckCircle } from "react-icons/md";
 import { useSelector } from "react-redux";
+import { getSocket } from "../socket";
 import Nav from "./Nav";
 import { serverUrl } from "../App";
 import DeliveryBoyTracking from "../pages/DeliveryBoyTracking";
@@ -19,6 +20,7 @@ import { toast } from "react-toastify";
 
 const PRIMARY = "#ff4d2d";
 
+
 /* ---------------- FIX: BUILD 24-HOUR STATS ---------------- */
 const buildHourlyStats = (rawStats = []) => {
   const base = Array.from({ length: 24 }, (_, hour) => ({
@@ -34,6 +36,7 @@ const buildHourlyStats = (rawStats = []) => {
 
   return base;
 };
+
 
 export default function DeliveryBoy() {
   const { userData } = useSelector((state) => state.user);
@@ -56,6 +59,7 @@ export default function DeliveryBoy() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
+
   /* ================= GPS ================= */
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -76,6 +80,7 @@ export default function DeliveryBoy() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+
   /* ================= UPDATE LOCATION ================= */
   useEffect(() => {
     if (!location.lat || !currentOrder) return;
@@ -94,6 +99,7 @@ export default function DeliveryBoy() {
       .catch(() => {});
   }, [location, currentOrder]);
 
+
   /* ================= ASSIGNMENTS ================= */
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -105,7 +111,6 @@ export default function DeliveryBoy() {
           setAssignments(res.data.assignments || []);
         }
       } catch (err) {
-        // Only show error if it's a server error (500), not auth issues or network problems
         if (err?.response?.status >= 500) {
           toast.error("Failed to fetch assignments");
         }
@@ -117,8 +122,24 @@ export default function DeliveryBoy() {
 
     fetchAssignments();
     const i = setInterval(fetchAssignments, 8000);
-    return () => clearInterval(i);
-  }, []);
+
+    // Real-time assignment via socket
+    if (userData?._id) {
+      const socket = getSocket(userData._id);
+      const handleNewAssignment = (assignment) => {
+        setAssignments((prev) => [assignment, ...prev]);
+        toast.info("New delivery assignment received!", { position: "top-right" });
+      };
+      socket.on("delivery:newAssignment", handleNewAssignment);
+      return () => {
+        clearInterval(i);
+        socket.off("delivery:newAssignment", handleNewAssignment);
+      };
+    } else {
+      return () => clearInterval(i);
+    }
+  }, [userData?._id]);
+
 
   /* ================= CURRENT ORDER ================= */
   useEffect(() => {
@@ -141,7 +162,8 @@ export default function DeliveryBoy() {
     return () => clearInterval(i);
   }, []);
 
-  /* ================= TODAY STATS (FIXED) ================= */
+
+  /* ================= TODAY STATS ================= */
   useEffect(() => {
     axios
       .get(`${serverUrl}/api/order/stats/today`, { withCredentials: true })
@@ -152,6 +174,7 @@ export default function DeliveryBoy() {
       })
       .catch(() => {});
   }, []);
+
 
   /* ================= ACTIONS ================= */
   const acceptOrder = async (id) => {
@@ -171,6 +194,7 @@ export default function DeliveryBoy() {
       setAcceptingOrder(false);
     }
   };
+
 
   const sendOtp = async () => {
     try {
@@ -193,6 +217,7 @@ export default function DeliveryBoy() {
       setSendingOtp(false);
     }
   };
+
 
   const verifyOtp = async () => {
     try {
@@ -221,6 +246,8 @@ export default function DeliveryBoy() {
       setVerifyingOtp(false);
     }
   };
+
+
 
   /* ================= UI ================= */
   return (
