@@ -25,10 +25,7 @@ function OwnerDashboard() {
     dispatch(setPendingOrdersCount(pending.length));
   }, [ownerPendingOrders]);
 
-  /* ---------------- Socket: New Order Received & Delivery Completed ---------------- */
-
   useEffect(() => {
-    // Always refetch shop orders for real-time badge and order list update
     const refetchShopOrders = async (toastMsg, toastType = "info") => {
       try {
         const res = await axios.get(`${serverUrl}/api/order/shop-orders`, { withCredentials: true });
@@ -59,27 +56,21 @@ function OwnerDashboard() {
     };
   }, [socket, dispatch]);
 
-  /* ---------------- Handlers: Toggle Availability & Delete Item ---------------- */
-
-  // Toggle availability handler
   const handleToggleAvailability = async (itemId, newAvailability) => {
     try {
       await axios.post(`${serverUrl}/api/item/edititem/${itemId}`, { availability: newAvailability }, { withCredentials: true });
-      // No reload! Just update local state for instant UI feedback
       if (shop && shop.items) {
         const updatedItems = shop.items.map(item =>
           item._id === itemId ? { ...item, availability: newAvailability } : item
         );
         dispatch({ type: "user/setShop", payload: { ...shop, items: updatedItems } });
       }
-      // Optionally, show a toast
       toast.success("Availability updated");
     } catch (err) {
       alert("Failed to update availability");
     }
   };
 
-  // Delete item handler
   const handleDeleteItem = async (itemId) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
     try {
@@ -153,7 +144,6 @@ function OwnerDashboard() {
             </div>
           </div>
 
-
           {/* Add Item Section */}
           <div className="flex items-center justify-center w-full mb-8">
             <div className="bg-white border border-orange-200 shadow-lg rounded-xl p-6 sm:p-8 w-full max-w-xl text-center hover:shadow-2xl transition-all duration-300">
@@ -175,7 +165,6 @@ function OwnerDashboard() {
           </div>
         </div>
       )}
-
 
       {/* If shop and items exist */}
       {shop && shop?.items.length > 0 && (
@@ -255,7 +244,7 @@ function OwnerDashboard() {
                 {/* CONTENT */}
                 <div className="flex flex-col justify-between p-3 flex-1">
                   <div>
-                    <h3 
+                    <h3
                       className="text-base font-semibold text-[#ff4d2d] cursor-pointer hover:text-[#ff6a3d] transition-colors"
                       onClick={() => navigate(`/product/${item._id}`)}
                     >

@@ -18,10 +18,10 @@ import {
   updateDeliveryBoyLocation, 
   updateOwnerOrderStatus, 
   verifyDeliveryOtp,
-  verifyRazorpay,
-  getDailyPayment,
-  getWeeklyPayment,
-  getMonthlyPayment
+    verifyRazorpay,
+    getDailyPayment,
+    getWeeklyPayment,
+    getMonthlyPayment
 } from "../controllers/order.controller.js"
 
 const orderRouter = express.Router()
