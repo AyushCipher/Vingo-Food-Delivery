@@ -47,7 +47,6 @@ export const serverUrl = import.meta.env.DEV
 
 
 
-
 function App() {
   const { userData } = useSelector(state => state.user);
 
@@ -58,10 +57,7 @@ function App() {
   getItemsByCity();
   getOwnerPendingOrders();
   updateLocation();
-<<<<<<< HEAD
   useGetAllReels();
-=======
->>>>>>> 7880056c02b4aff0620d28eeb954bfcf26277297
 
   // Initialize socket singleton
   useEffect(() => {
@@ -94,10 +90,7 @@ function App() {
         <Route path="/edit-reel/:reelId" element={userData ? <EditReel /> : <Navigate to="/signin" />} />
         <Route path="/saved-loops" element={userData ? <SavedLoops /> : <Navigate to="/signin" />} />
         <Route path="/product/:itemId" element={userData ? <ProductDetails /> : <Navigate to="/signin" />} />
-<<<<<<< HEAD
         <Route path="/delivery-payment" element={userData ? <DeliveryBoyPayment /> : <Navigate to="/signin" />} />
-=======
->>>>>>> 7880056c02b4aff0620d28eeb954bfcf26277297
 
         {/* 404 Route - must be last */}
         <Route path="*" element={<NotFound />} />
