@@ -18,7 +18,10 @@ import {
   updateDeliveryBoyLocation, 
   updateOwnerOrderStatus, 
   verifyDeliveryOtp,
-  verifyRazorpay   // 👈 ye import karna mat bhoolna
+  verifyRazorpay,
+  getDailyPayment,
+  getWeeklyPayment,
+  getMonthlyPayment
 } from "../controllers/order.controller.js"
 
 const orderRouter = express.Router()
@@ -46,6 +49,11 @@ orderRouter.post("/verify-otp", isAuth, verifyDeliveryOtp);
 orderRouter.get("/stats/today", isAuth, getTodayStats);
 orderRouter.get("/stats/month", isAuth, getMonthStats);
 orderRouter.get("/my-delivered-orders", isAuth, getMyDeliveredOrders);
+
+// Payment
+orderRouter.get("/payment/daily", isAuth, getDailyPayment);
+orderRouter.get("/payment/weekly", isAuth, getWeeklyPayment);
+orderRouter.get("/payment/monthly", isAuth, getMonthlyPayment);
 
 // Others
 orderRouter.get("/my-location", isAuth, myLocation);

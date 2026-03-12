@@ -86,7 +86,7 @@ function FoodCard({ data }) {
         </div>
 
         {/* View Details Overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-[5]">
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-[5]">
           <div className="flex items-center gap-2 text-white font-medium bg-[#ff4d2d] px-4 py-2 rounded-full">
             <FaEye />
             <span>View Details</span>

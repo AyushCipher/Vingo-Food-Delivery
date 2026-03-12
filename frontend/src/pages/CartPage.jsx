@@ -101,11 +101,15 @@ function CartPage() {
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-20 h-20 object-cover rounded-xl border"
+                      className="w-20 h-20 object-cover rounded-xl border cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/product/${item.id}`)}
                     />
 
                     <div>
-                      <h3 className="font-bold text-gray-800">
+                      <h3 
+                        className="font-bold text-gray-800 cursor-pointer hover:text-[#ff4d2d] transition-colors"
+                        onClick={() => navigate(`/product/${item.id}`)}
+                      >
                         {item.name}
                       </h3>
 

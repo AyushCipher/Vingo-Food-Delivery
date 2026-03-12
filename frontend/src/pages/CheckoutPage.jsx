@@ -16,8 +16,9 @@ import { useNavigate } from "react-router-dom";
 import { serverUrl } from "../App";
 import useCurrentLocation from "../hooks/useCurrentLocation";
 import { clearCart } from "../redux/userSlice";
+import ClipLoader from "react-spinners/ClipLoader";
 
-const GEOAPIFY_API_KEY = "812d749999de462e9df7ca070383975b";
+const GEOAPIFY_API_KEY = "import.meta.env.VITE_GEOAPIKEY";
 
 // Fix Leaflet default icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -38,6 +39,8 @@ function Recenter({ lat, lng }) {
   return null;
 }
 
+
+
 export default function CheckoutPage() {
   const { cartItems, userData } = useSelector((s) => s.user);
   const dispatch = useDispatch();
@@ -53,6 +56,7 @@ export default function CheckoutPage() {
 
   const [method, setMethod] = useState("cod");
   const [searchText, setSearchText] = useState(""); // 👈 input ke liye
+  const [processing, setProcessing] = useState(false);
   const navigate = useNavigate();
 
   // address hook se aaya → input me sync karo
@@ -64,7 +68,7 @@ export default function CheckoutPage() {
 
   const subtotal = cartItems.reduce(
     (sum, i) => sum + Number(i.price) * Number(i.quantity),
-    0
+    0,
   );
   const deliveryFee = subtotal > 500 ? 0 : 40;
   const total = subtotal + deliveryFee;
@@ -75,8 +79,8 @@ export default function CheckoutPage() {
     try {
       const res = await fetch(
         `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-          addr
-        )}&apiKey=${GEOAPIFY_API_KEY}`
+          addr,
+        )}&apiKey=${GEOAPIFY_API_KEY}`,
       );
       const data = await res.json();
       if (data.features && data.features.length > 0) {
@@ -100,8 +104,18 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (processing) return; // Prevent multiple clicks
+    
+    setProcessing(true);
     try {
       // Step 1: Place order
+      // Patch cartItems: ensure shop is always a string (shop._id if object)
+      const patchedCartItems = cartItems.map(item => {
+        if (item.shop && typeof item.shop === 'object' && item.shop._id) {
+          return { ...item, shop: item.shop._id };
+        }
+        return item;
+      });
       const res = await axios.post(
         `${serverUrl}/api/order/placeorder`,
         {
@@ -111,9 +125,9 @@ export default function CheckoutPage() {
             longitude: location.lng,
           },
           paymentMethod: method,
-          cartItems,
+          cartItems: patchedCartItems,
         },
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       const orderId = res.data.orderId; // assume backend returns { order, razorpayOrder }
@@ -128,9 +142,12 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error(error);
       alert("Order failed!");
+    } finally {
+      setProcessing(false);
     }
   };
 
+  
   const openRazorpay = (orderId, razorpayOrder) => {
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Razorpay key id from env
@@ -150,7 +167,7 @@ export default function CheckoutPage() {
               razorpay_signature: response.razorpay_signature,
               orderId,
             },
-            { withCredentials: true }
+            { withCredentials: true },
           );
 
           console.log("Verify response:", verifyRes.data);
@@ -174,6 +191,8 @@ export default function CheckoutPage() {
     const rzp = new window.Razorpay(options);
     rzp.open();
   };
+
+
 
   return (
     <div className="min-h-screen bg-[#fff9f6] flex items-center justify-center p-5 mb-5">
@@ -339,10 +358,18 @@ export default function CheckoutPage() {
         </section>
 
         <button
-          className="w-full bg-[#ff4d2d] hover:bg-[#e64526] text-white py-3 rounded-xl font-semibold"
+          className="w-full bg-[#ff4d2d] hover:bg-[#e64526] text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           onClick={handlePlaceOrder}
+          disabled={processing}
         >
-          {method === "cod" ? "Place Order" : "Pay & Place Order"}
+          {processing ? (
+            <>
+              <ClipLoader size={20} color="#fff" />
+              <span>Processing...</span>
+            </>
+          ) : (
+            method === "cod" ? "Place Order" : "Pay & Place Order"
+          )}
         </button>
       </div>
     </div>

@@ -57,7 +57,12 @@ const userSchema = new mongoose.Schema({
   socketId: { 
     type: String, 
     default: null 
-  }
+  },
+
+  savedReels: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Reel"
+  }]
 
 }, { timestamps: true });
 

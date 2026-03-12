@@ -18,6 +18,7 @@ export default function AddItem() {
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
   const [description, setDescription] = useState("");
+  const [availability, setAvailability] = useState(true);
 
   const [loading, setLoading] = useState(false);
 
@@ -43,14 +44,6 @@ export default function AddItem() {
 
     try {
 
-      if (!backendImage) {
-        toast.error("Please upload an image", { 
-          position: "top-right" 
-        });
-        setLoading(false);
-        return;
-      }
-
       const formData = new FormData();
       formData.append("name", name);
       formData.append("price", price);
@@ -58,6 +51,7 @@ export default function AddItem() {
       formData.append("category", category);
       formData.append("image", backendImage);
       formData.append("description", description);
+      formData.append("availability", availability);
 
       const result = await axios.post(
         `${serverUrl}/api/item/additem`,
@@ -112,6 +106,22 @@ export default function AddItem() {
 
         {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Availability */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Availability
+            </label>
+            <select
+              value={availability ? "true" : "false"}
+              onChange={e => setAvailability(e.target.value === "true")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+            >
+              <option value="true">Available</option>
+              <option value="false">Unavailable</option>
+            </select>
+          </div>
+
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 
 import { serverUrl } from "../App";
 import { setOwnerPendingOrders, setDeliveryBoys, setPendingOrdersCount } from "../redux/userSlice";
+import { getSocket } from "../socket";
 
 const PRIMARY = "#ff4d2d";
 const statusOptions = ["pending", "preparing", "out_for_delivery"];
@@ -25,12 +26,46 @@ const formatStatus = (status) => {
 };
 
 export default function PendingOrders() {
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  const { ownerPendingOrders, deliveryBoys, socket, pendingOrdersCount } = useSelector(
+  const { ownerPendingOrders, deliveryBoys, userData, pendingOrdersCount } = useSelector(
     (state) => state.user
   );
+  // Always use singleton socket instance for real-time events
+  const socket = userData?._id ? getSocket(userData._id) : null;
+
+  /* ---------------- Socket: Order Status Updated (real-time payment/COD tick) ---------------- */
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleStatusUpdated = (data) => {
+      // Option 1: Re-fetch all orders for full accuracy (recommended for now)
+      setTimeout(async () => {
+        try {
+          const res = await axios.get(`${serverUrl}/api/order/shop-orders`, {
+            withCredentials: true,
+          });
+          if (res.data.success) {
+            dispatch(setOwnerPendingOrders(res.data.orders || []));
+            // Update count based on pending/preparing orders
+            const pendingCount = res.data.orders?.filter(
+              o => o.shopOrder?.status === "pending" || o.shopOrder?.status === "preparing"
+            ).length || 0;
+            dispatch(setPendingOrdersCount(pendingCount));
+          }
+        } catch (err) {
+          console.error("Failed to fetch orders (statusUpdated):", err);
+        }
+      }, 1000);
+      toast.info("Order status updated!", { position: "top-right" });
+    };
+
+    socket.on("orders:statusUpdated", handleStatusUpdated);
+    return () => {
+      socket.off("orders:statusUpdated", handleStatusUpdated);
+    };
+  }, [socket, dispatch]);
 
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
@@ -73,57 +108,23 @@ export default function PendingOrders() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewOrder = (data) => {
-      console.log("🆕 New order received:", data);
-      
-      // Check if the order data has all required populated fields
-      if (data.order?.user?.fullName && data.order?.shopOrder?.items) {
-        // Use the populated data directly from socket
-        const newOrderEntry = {
-          _id: data.order._id,
-          user: data.order.user,
-          address: data.order.address,
-          paymentMethod: data.order.paymentMethod,
-          createdAt: data.order.createdAt,
-          shopOrder: data.order.shopOrder,
-        };
-        
-        console.log("📦 Using socket data directly:", newOrderEntry);
-        
-        // Add to beginning of orders list
-        dispatch(setOwnerPendingOrders([newOrderEntry, ...ownerPendingOrders]));
-        
-        // Update pending orders count
-        dispatch(setPendingOrdersCount((pendingOrdersCount || 0) + 1));
-        
-        toast.info("🔔 New order received!", {
-          position: "top-right",
+    const handleNewOrder = async () => {
+      try {
+        const res = await axios.get(`${serverUrl}/api/order/shop-orders`, {
+          withCredentials: true,
         });
-      } else {
-        // Fallback: re-fetch if socket data is incomplete
-        console.log("⚠️ Socket data incomplete, fetching from server...");
-        toast.info("🔔 New order received!", {
-          position: "top-right",
-        });
-        
-        setTimeout(async () => {
-          try {
-            const res = await axios.get(`${serverUrl}/api/order/shop-orders`, {
-              withCredentials: true,
-            });
-            if (res.data.success) {
-              dispatch(setOwnerPendingOrders(res.data.orders || []));
-              // Update count based on pending orders
-              const pendingCount = res.data.orders?.filter(
-                o => o.shopOrder?.status === "pending" || o.shopOrder?.status === "preparing"
-              ).length || 0;
-              dispatch(setPendingOrdersCount(pendingCount));
-            }
-          } catch (err) {
-            console.error("Failed to fetch orders:", err);
-          }
-        }, 1500);
+        if (res.data.success) {
+          dispatch(setOwnerPendingOrders(res.data.orders || []));
+          // Update count based on pending/preparing orders
+          const pendingCount = res.data.orders?.filter(
+            o => o.shopOrder?.status === "pending" || o.shopOrder?.status === "preparing"
+          ).length || 0;
+          dispatch(setPendingOrdersCount(pendingCount));
+        }
+      } catch (err) {
+        console.error("Failed to fetch orders (orders:new):", err);
       }
+      toast.info("🔔 New order received!", { position: "top-right" });
     };
 
     socket.on("orders:new", handleNewOrder);
@@ -131,7 +132,7 @@ export default function PendingOrders() {
     return () => {
       socket.off("orders:new", handleNewOrder);
     };
-  }, [socket, dispatch, ownerPendingOrders]);
+  }, [socket, dispatch]);
 
   /* ---------------- Socket: Order Delivered ---------------- */
   useEffect(() => {
@@ -350,9 +351,15 @@ export default function PendingOrders() {
                         <img
                           src={item.item?.image || "/placeholder.png"}
                           alt={item.name}
-                          className="w-full h-24 object-cover rounded-lg mb-2"
+                          className="w-full h-24 object-cover rounded-lg mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigate(`/product/${item.item?._id}`)}
                         />
-                        <p className="text-sm font-semibold">{item.name}</p>
+                        <p 
+                          className="text-sm font-semibold cursor-pointer hover:text-[#ff4d2d] transition-colors"
+                          onClick={() => navigate(`/product/${item.item?._id}`)}
+                        >
+                          {item.name}
+                        </p>
                         <p className="text-xs text-gray-500">
                           Qty {item.quantity} × ₹{item.price}
                         </p>
@@ -365,6 +372,35 @@ export default function PendingOrders() {
                 <div className="flex flex-wrap justify-between items-center gap-4 border-t pt-4">
                   <span className="text-md font-semibold capitalize text-[#ff4d2d]">
                     {formatStatus(order.shopOrder?.status)}
+                  </span>
+
+                  {/* Payment Status */}
+                  <span className="text-xs font-semibold">
+                    Payment Status: {order.shopOrder?.status === "delivered" ? (
+                      order.paymentMethod === "online" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                          Online <span className="ml-1">&#10003;</span>
+                        </span>
+                      ) : order.paymentMethod === "cod" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                          COD <span className="ml-1">&#10003;</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )
+                    ) : (
+                      order.paymentMethod === "online" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold border border-green-300">
+                          Online
+                        </span>
+                      ) : order.paymentMethod === "cod" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold border border-red-300">
+                          False
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )
+                    )}
                   </span>
 
                   <div className="flex items-center gap-2">
@@ -391,8 +427,8 @@ export default function PendingOrders() {
                   </div>
                 </div>
 
-                {/* Assigned Delivery Boy */}
-                {order.shopOrder?.assignedDeliveryBoy && (
+                {/* Assigned Delivery Boy (show deliveredBy if assignedDeliveryBoy is null and delivered) */}
+                {(order.shopOrder?.assignedDeliveryBoy || (order.shopOrder?.status === "delivered" && order.shopOrder?.deliveredBy)) && (
                   <div className="mt-3 p-3 border rounded-xl bg-gray-50">
                     <p className="text-sm font-semibold text-gray-700 mb-1">
                       Assigned Delivery Boy:
@@ -401,10 +437,10 @@ export default function PendingOrders() {
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MdPhone className="text-[#ff4d2d]" />
                       <span className="font-medium">
-                        {order.shopOrder.assignedDeliveryBoy.fullName}
+                        {(order.shopOrder.assignedDeliveryBoy || order.shopOrder.deliveredBy)?.fullName}
                       </span>
                       <span className="text-gray-400">–</span>
-                      <span>{order.shopOrder.assignedDeliveryBoy.mobile}</span>
+                      <span>{(order.shopOrder.assignedDeliveryBoy || order.shopOrder.deliveredBy)?.mobile}</span>
                     </div>
                   </div>
                 )}

@@ -21,32 +21,6 @@ const itemSchema = new mongoose.Schema(
       default: "",
       maxlength: 1000,
     },
-    ingredients: [{
-      type: String,
-    }],
-    nutritionInfo: {
-      calories: { type: Number, default: 0 },
-      protein: { type: String, default: "" },
-      carbs: { type: String, default: "" },
-      fat: { type: String, default: "" },
-    },
-    servingSize: {
-      type: String,
-      default: "1 serving",
-    },
-    preparationTime: {
-      type: Number, // in minutes
-      default: 15,
-    },
-    spiceLevel: {
-      type: String,
-      enum: ["mild", "medium", "hot", "extra hot", ""],
-      default: "",
-    },
-    allergens: [{
-      type: String,
-      enum: ["gluten", "dairy", "nuts", "eggs", "soy", "shellfish", ""],
-    }],
     category: {
       type: String,
       required: true,

@@ -26,6 +26,7 @@ function getCity() {
             data?.features?.[0]?.properties?.state ||
             "Unknown";
 
+          console.log('Detected city:', city);
           dispatch(setCity(city));
         } catch (err) {
           console.log("City fetch error:", err);

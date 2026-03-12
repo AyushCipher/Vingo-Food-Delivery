@@ -9,6 +9,7 @@ import shopRouter from "./routes/shop.routes.js"
 import itemRouter from "./routes/item.routes.js"
 import orderRouter from "./routes/order.routes.js"
 import reviewRouter from "./routes/review.routes.js"
+import reelRouter from "./routes/reel.routes.js"
 import http from "http"
 import { Server } from "socket.io"
 import socketHandler from "./socket.js"
@@ -30,8 +31,8 @@ const server = http.createServer(app)
 // Allowed origins for CORS - includes both dev and production URLs
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://vingo-8134.onrender.com"
-];
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 const io = new Server(server,{
   cors: {
@@ -57,6 +58,7 @@ app.use("/api/shop", shopRouter)
 app.use("/api/item", itemRouter)
 app.use("/api/order", orderRouter)
 app.use("/api/review", reviewRouter)
+app.use("/api/reel", reelRouter)
 
 socketHandler(io)
 

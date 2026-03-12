@@ -1,4 +1,4 @@
-import { sendOtpToUser } from "../config/mail.js";
+import { sendOtpToUser, sendOrderConfirmationToCustomer, sendOrderNotificationToOwner } from "../config/mail.js";
 import dotenv from "dotenv"
 dotenv.config()
 import DeliveryAssignment from "../models/deliveryAssignment.model.js";
@@ -8,8 +8,8 @@ import User from "../models/user.model.js";
 import Razorpay from "razorpay"
 
 let instance = new Razorpay({
-  key_id:process.env.RAZORPAY_KEY_ID,
-  key_secret:process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 
@@ -110,14 +110,41 @@ export const placeOrder = async (req, res) => {
     user.orders.push(newOrder._id);
     await user.save();
 
-    // ✅ Fetch fully populated order for socket emission
+    // Fetch fully populated order for socket emission and emails
     const io = req.app.get("io");
-    if (io) {
-      const populatedOrder = await Order.findById(newOrder._id)
-        .populate("user", "fullName email mobile")
-        .populate("shopOrders.shop", "name")
-        .populate("shopOrders.items.item", "name price image");
+    const populatedOrder = await Order.findById(newOrder._id)
+      .populate("user", "fullName email mobile")
+      .populate("shopOrders.shop", "name")
+      .populate("shopOrders.items.item", "name price image");
 
+    // Send emails to customer and shop owners
+    try {
+      // Send confirmation email to customer
+      await sendOrderConfirmationToCustomer(populatedOrder.user, populatedOrder);
+      console.log("✅ Customer email sent to:", populatedOrder.user.email);
+      
+      // Send notification email to each shop owner
+      for (const shopOrder of populatedOrder.shopOrders) {
+        const shop = await Shop.findById(shopOrder.shop._id).populate("owner", "fullName email");
+        console.log("📦 Shop:", shop?.name, "| Owner:", shop?.owner ? `${shop.owner.fullName} (${shop.owner.email})` : "NOT FOUND");
+        
+        if (shop && shop.owner && shop.owner.email) {
+          await sendOrderNotificationToOwner(shop.owner, populatedOrder, shopOrder);
+          console.log("✅ Owner email sent to:", shop.owner.email);
+        } else {
+          console.log("⚠️ Skipping - No owner email available");
+        }
+      }
+      
+      console.log("✅ All order emails processed");
+    } catch (emailError) {
+      console.error("⚠️ Failed to send order emails:", emailError.message);
+      console.error("Stack:", emailError.stack);
+      // Don't fail the order if email fails
+    }
+
+    // Emit socket events
+    if (io) {
       populatedOrder.shopOrders.forEach(shopOrder => {
         io.emit("orders:new", {
           ownerId: shopOrder.owner.toString(),
@@ -146,14 +173,14 @@ export const verifyRazorpay = async (req, res) => {
   try {
     const { razorpay_payment_id, orderId } = req.body;
 
-    // 🔹 Razorpay payment fetch
+    // Razorpay payment fetch
     const payment = await instance.payments.fetch(razorpay_payment_id);
 
     if (!payment || payment.status !== "captured") {
       return res.status(400).json({ success: false, message: "Payment failed or not captured" });
     }
 
-    // 🔹 Update order
+    // Update order
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
@@ -161,19 +188,53 @@ export const verifyRazorpay = async (req, res) => {
     order.razorpayPaymentId = razorpay_payment_id;
 
     order.shopOrders.forEach(shopOrder => {
-  shopOrder.status = "pending";
-});
+      shopOrder.status = "pending";
+    });
 
     await order.save();
-    
-    // ✅ Fetch fully populated order for socket emission
-    const io = req.app.get("io");
-    if (io) {
-      const populatedOrder = await Order.findById(order._id)
-        .populate("user", "fullName email mobile")
-        .populate("shopOrders.shop", "name")
-        .populate("shopOrders.items.item", "name price image");
 
+    // Add order to user's orders array
+    const user = await User.findById(order.user);
+    if (user && !user.orders.includes(order._id)) {
+      user.orders.push(order._id);
+      await user.save();
+    }
+    
+    // Fetch fully populated order for socket emission and emails
+    const io = req.app.get("io");
+    const populatedOrder = await Order.findById(order._id)
+      .populate("user", "fullName email mobile")
+      .populate("shopOrders.shop", "name")
+      .populate("shopOrders.items.item", "name price image");
+
+    // Send emails to customer and shop owners
+    try {
+      // Send confirmation email to customer
+      await sendOrderConfirmationToCustomer(populatedOrder.user, populatedOrder);
+      console.log("✅ Customer email sent to:", populatedOrder.user.email);
+      
+      // Send notification email to each shop owner
+      for (const shopOrder of populatedOrder.shopOrders) {
+        const shop = await Shop.findById(shopOrder.shop._id).populate("owner", "fullName email");
+        console.log("📦 Shop:", shop?.name, "| Owner:", shop?.owner ? `${shop.owner.fullName} (${shop.owner.email})` : "NOT FOUND");
+        
+        if (shop && shop.owner && shop.owner.email) {
+          await sendOrderNotificationToOwner(shop.owner, populatedOrder, shopOrder);
+          console.log("✅ Owner email sent to:", shop.owner.email);
+        } else {
+          console.log("⚠️ Skipping - No owner email available");
+        }
+      }
+      
+      console.log("✅ All order emails processed");
+    } catch (emailError) {
+      console.error("⚠️ Failed to send order emails:", emailError.message);
+      console.error("Stack:", emailError.stack);
+      // Don't fail the order if email fails
+    }
+
+    // Emit socket events
+    if (io) {
       populatedOrder.shopOrders.forEach(shopOrder => {
         io.emit("orders:new", {
           ownerId: shopOrder.owner.toString(),
@@ -228,10 +289,14 @@ export const getOwnerOrders = async (req, res) => {
       .populate("shopOrders.shop", "name")            // shop info
       .populate(
         "shopOrders.items.item",
-        "name price image"                            // ✅ IMAGE ALWAYS
+        "name price image"                            // IMAGE ALWAYS
       )
       .populate(
         "shopOrders.assignedDeliveryBoy",
+        "fullName mobile"
+      )
+      .populate(
+        "shopOrders.deliveredBy",
         "fullName mobile"
       );
 
@@ -247,7 +312,7 @@ export const getOwnerOrders = async (req, res) => {
         address: order.address,
         paymentMethod: order.paymentMethod,
         createdAt: order.createdAt,
-        shopOrder, // ✅ populated shopOrder (items + image intact)
+        shopOrder, // populated shopOrder (items + image intact)
       };
     });
 
@@ -312,7 +377,7 @@ export const updateOwnerOrderStatus = async (req, res) => {
       // First, find ALL delivery boys to debug
       const allDeliveryBoys = await User.find({ role: "deliveryBoy" })
         .select("_id fullName isOnline socketId location");
-      console.log("👥 All delivery boys in DB:", allDeliveryBoys.map(b => ({
+        console.log("👥 All delivery boys in DB:", allDeliveryBoys.map(b => ({
         id: b._id,
         name: b.fullName,
         isOnline: b.isOnline,
@@ -339,7 +404,7 @@ export const updateOwnerOrderStatus = async (req, res) => {
           },
         }).select("_id fullName mobile socketId location");
 
-        console.log("✅ Nearby delivery boys (within 10km, online, with socket):", nearby.length);
+        console.log(" Nearby delivery boys (within 10km, online, with socket):", nearby.length);
 
         const nearbyIds = nearby.map((b) => b._id);
 
@@ -367,7 +432,7 @@ export const updateOwnerOrderStatus = async (req, res) => {
             (so) => so.shop._id.toString() === shopId
           );
 
-          // ✅ EMIT SOCKET BEFORE RETURNING (so user gets update!)
+          // EMIT SOCKET BEFORE RETURNING (so user gets update!)
           const io = req.app.get("io");
           if (io) {
             io.emit("orders:statusUpdated", {
@@ -573,7 +638,7 @@ export const acceptAssignment = async (req, res) => {
 
     await order.save();
 
-    // ✅ Notify shop owner that delivery boy has accepted
+    // Notify shop owner that delivery boy has accepted
     const io = req.app.get("io");
     if (io) {
       io.emit("delivery:accepted", {
@@ -601,6 +666,7 @@ export const acceptAssignment = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 
 export const getCurrentOrder = async (req, res) => {
@@ -690,6 +756,7 @@ export const getCurrentOrder = async (req, res) => {
 };
 
 
+
 export const updateDeliveryBoyLocation = async (req, res) => {
   try {
     const { longitude, latitude, orderId, shopOrderId } = req.body;
@@ -739,9 +806,6 @@ export const updateDeliveryBoyLocation = async (req, res) => {
 
 
 
-
-
-
 export const myLocation= async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -753,6 +817,7 @@ export const myLocation= async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 
 export const getOrderById = async (req, res) => {
@@ -783,6 +848,7 @@ export const getOrderById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 
 export const getDeliveryBoyLocation = async (req, res) => {
@@ -833,7 +899,8 @@ export const getDeliveryBoyLocation = async (req, res) => {
 };
 
 
-// 🔹 Step 1: Send OTP
+
+// Step 1: Send OTP
 export const sendDeliveryOtp = async (req, res) => {
   try {
     const { orderId, shopOrderId } = req.body;
@@ -916,21 +983,21 @@ export const verifyDeliveryOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
     }
 
-    // ✅ MARK DELIVERED
+    // MARK DELIVERED
     shopOrder.status = "delivered";
     shopOrder.deliveredAt = new Date();
-    shopOrder.deliveredBy = shopOrder.assignedDeliveryBoy; // ✅ STORE WHO DELIVERED before clearing
+    shopOrder.deliveredBy = shopOrder.assignedDeliveryBoy; // STORE WHO DELIVERED before clearing
     shopOrder.deliveryOtp = null;
     shopOrder.otpExpiresAt = null;
 
-    // ✅ VERY IMPORTANT — FREE THE DELIVERY BOY
+    // VERY IMPORTANT — FREE THE DELIVERY BOY
     shopOrder.assignedDeliveryBoy = null;
     shopOrder.assignment = null;
     shopOrder.deliveryBoyLocation = undefined;
 
     await order.save();
 
-    // ✅ DELETE ASSIGNMENT
+    // DELETE ASSIGNMENT
     await DeliveryAssignment.deleteMany({
       order: order._id,
       shopOrderId: shopOrder._id,
@@ -999,13 +1066,15 @@ export const getMyDeliveredOrders = async (req, res) => {
   }
 };
 
+
+
 export const getTodayStats = async (req, res) => {
   try {
     const deliveryBoyId = req.userId;
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    // ✅ Find orders where this delivery boy delivered
+    // Find orders where this delivery boy delivered
     const orders = await Order.find({
       $or: [
         { "shopOrders.deliveredBy": deliveryBoyId },
@@ -1014,7 +1083,7 @@ export const getTodayStats = async (req, res) => {
     }).lean();
 
 
-    // ✅ Flatten and filter today's delivered orders by this delivery boy
+    // Flatten and filter today's delivered orders by this delivery boy
     let todayDelivered = [];
     orders.forEach(order => {
       order.shopOrders.forEach(shopOrder => {
@@ -1033,14 +1102,14 @@ export const getTodayStats = async (req, res) => {
       });
     });
 
-    // ✅ hour wise group manually
+    // Hour wise group manually
     let stats = {};
     todayDelivered.forEach(shopOrder => {
       const hour = new Date(shopOrder.deliveredAt).getHours();
       stats[hour] = (stats[hour] || 0) + 1;
     });
 
-    // ✅ object → array convert
+    // object → array convert
     const formattedStats = Object.keys(stats).map(hour => ({
       hour: parseInt(hour),
       count: stats[hour]
@@ -1061,15 +1130,15 @@ export const getMonthStats = async (req, res) => {
   try {
     const deliveryBoyId = req.userId;
 
-    // ✅ Start of month
+    // Start of month
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // ✅ Current time
+    // Current time
     const now = new Date();
 
-    // ✅ Find orders where this delivery boy delivered
+    // Find orders where this delivery boy delivered
     const orders = await Order.find({
       $or: [
         { "shopOrders.deliveredBy": deliveryBoyId },
@@ -1078,7 +1147,7 @@ export const getMonthStats = async (req, res) => {
       "shopOrders.deliveredAt": { $gte: startOfMonth, $lte: now }
     }).lean();
 
-    // ✅ Flatten and filter delivered orders by this delivery boy
+    // Flatten and filter delivered orders by this delivery boy
     let monthDelivered = [];
     orders.forEach(order => {
       order.shopOrders.forEach(shopOrder => {
@@ -1097,15 +1166,15 @@ export const getMonthStats = async (req, res) => {
       });
     });
 
-    // ✅ Day-wise group बनाना
+    // Day-wise group made
     let stats = {};
     monthDelivered.forEach(shopOrder => {
       const date = new Date(shopOrder.deliveredAt);
-      const day = date.getDate(); // सिर्फ दिन चाहिए (1-31)
+      const day = date.getDate(); // Only get date from 1 to 31
       stats[day] = (stats[day] || 0) + 1;
     });
 
-    // ✅ object → array convert
+    // object → array convert
     const formattedStats = Object.keys(stats).map(day => ({
       day: parseInt(day),
       count: stats[day]
@@ -1118,5 +1187,249 @@ export const getMonthStats = async (req, res) => {
   } catch (err) {
     console.error("Month Stats Error:", err);
     res.status(500).json({ success: false, message: "Failed to fetch monthly stats" });
+  }
+};
+
+
+// PAYMENT CALCULATION ENDPOINTS
+const BASE_PAY_PER_DELIVERY = 80;
+const PEAK_HOUR_BONUS = 20;
+const PEAK_HOURS = [12, 13, 19, 20, 21]; // 12-1pm, 7-9pm
+
+const calculatePaymentWithBonuses = (deliveries, period) => {
+  let basePayment = deliveries * BASE_PAY_PER_DELIVERY;
+  let bonus = 0;
+
+  // Milestone bonuses
+  if (deliveries >= 10) bonus += 100;
+  if (deliveries >= 20) bonus += 200;
+  if (deliveries >= 30) bonus += 300;
+
+  // Period-specific bonuses
+  if (period === 'weekly' && deliveries >= 40) {
+    bonus += 500;
+  } else if (period === 'monthly') {
+    if (deliveries >= 150) bonus += 2000;
+    if (deliveries >= 180) bonus += 3000;
+    if (deliveries >= 200) bonus += 5000;
+  }
+
+  return { basePayment, bonus, total: basePayment + bonus };
+};
+
+export const getDailyPayment = async (req, res) => {
+  try {
+    const deliveryBoyId = req.userId;
+    
+    if (!deliveryBoyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    console.log('getDailyPayment for deliveryBoyId:', deliveryBoyId);
+    
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const orders = await Order.find({
+      $or: [
+        { "shopOrders.deliveredBy": deliveryBoyId },
+        { "shopOrders.assignedDeliveryBoy": deliveryBoyId, "shopOrders.status": "delivered" }
+      ]
+    }).lean();
+
+    console.log('Found orders:', orders.length);
+
+    let todayDelivered = [];
+    let peakHourDeliveries = 0;
+
+    orders.forEach(order => {
+      order.shopOrders.forEach(shopOrder => {
+        const isDeliveredByMe = 
+          (shopOrder.deliveredBy && String(shopOrder.deliveredBy) === String(deliveryBoyId)) ||
+          (String(shopOrder.assignedDeliveryBoy) === String(deliveryBoyId) && shopOrder.status === "delivered");
+        
+        if (
+          isDeliveredByMe &&
+          shopOrder.status === "delivered" &&
+          shopOrder.deliveredAt &&
+          new Date(shopOrder.deliveredAt) >= startOfDay
+        ) {
+          todayDelivered.push(shopOrder);
+          const hour = new Date(shopOrder.deliveredAt).getHours();
+          if (PEAK_HOURS.includes(hour)) {
+            peakHourDeliveries++;
+          }
+        }
+      });
+    });
+
+    const deliveries = todayDelivered.length;
+    const payment = calculatePaymentWithBonuses(deliveries, 'daily');
+    
+    // Add peak hour bonus
+    const peakHourBonus = peakHourDeliveries * PEAK_HOUR_BONUS;
+    payment.bonus += peakHourBonus;
+    payment.total = payment.basePayment + payment.bonus;
+    payment.peakHourDeliveries = peakHourDeliveries;
+    payment.peakHourBonus = peakHourBonus;
+
+    console.log('Daily payment response:', { deliveries, ...payment });
+
+    res.json({ 
+      success: true, 
+      deliveries,
+      basePayment: payment.basePayment,
+      bonus: payment.bonus,
+      total: payment.total,
+      peakHourDeliveries: payment.peakHourDeliveries,
+      peakHourBonus: payment.peakHourBonus
+    });
+  } catch (err) {
+    console.error("Daily Payment Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch daily payment" });
+  }
+};
+
+export const getWeeklyPayment = async (req, res) => {
+  try {
+    const deliveryBoyId = req.userId;
+    
+    if (!deliveryBoyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    console.log('getWeeklyPayment for deliveryBoyId:', deliveryBoyId);
+    
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Start from Sunday
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const orders = await Order.find({
+      $or: [
+        { "shopOrders.deliveredBy": deliveryBoyId },
+        { "shopOrders.assignedDeliveryBoy": deliveryBoyId, "shopOrders.status": "delivered" }
+      ]
+    }).lean();
+
+    let weekDelivered = [];
+    let peakHourDeliveries = 0;
+
+    orders.forEach(order => {
+      order.shopOrders.forEach(shopOrder => {
+        const isDeliveredByMe = 
+          (shopOrder.deliveredBy && String(shopOrder.deliveredBy) === String(deliveryBoyId)) ||
+          (String(shopOrder.assignedDeliveryBoy) === String(deliveryBoyId) && shopOrder.status === "delivered");
+        
+        if (
+          isDeliveredByMe &&
+          shopOrder.status === "delivered" &&
+          shopOrder.deliveredAt &&
+          new Date(shopOrder.deliveredAt) >= startOfWeek
+        ) {
+          weekDelivered.push(shopOrder);
+          const hour = new Date(shopOrder.deliveredAt).getHours();
+          if (PEAK_HOURS.includes(hour)) {
+            peakHourDeliveries++;
+          }
+        }
+      });
+    });
+
+    const deliveries = weekDelivered.length;
+    const payment = calculatePaymentWithBonuses(deliveries, 'weekly');
+    
+    // Add peak hour bonus
+    const peakHourBonus = peakHourDeliveries * PEAK_HOUR_BONUS;
+    payment.bonus += peakHourBonus;
+    payment.total = payment.basePayment + payment.bonus;
+    payment.peakHourDeliveries = peakHourDeliveries;
+    payment.peakHourBonus = peakHourBonus;
+
+    console.log('Weekly payment response:', { deliveries, ...payment });
+
+    res.json({ 
+      success: true, 
+      deliveries,
+      basePayment: payment.basePayment,
+      bonus: payment.bonus,
+      total: payment.total,
+      peakHourDeliveries: payment.peakHourDeliveries,
+      peakHourBonus: payment.peakHourBonus
+    });
+  } catch (err) {
+    console.error("Weekly Payment Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch weekly payment" });
+  }
+};
+
+export const getMonthlyPayment = async (req, res) => {
+  try {
+    const deliveryBoyId = req.userId;
+    
+    if (!deliveryBoyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    console.log('getMonthlyPayment for deliveryBoyId:', deliveryBoyId);
+    
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const orders = await Order.find({
+      $or: [
+        { "shopOrders.deliveredBy": deliveryBoyId },
+        { "shopOrders.assignedDeliveryBoy": deliveryBoyId, "shopOrders.status": "delivered" }
+      ]
+    }).lean();
+
+    let monthDelivered = [];
+    let peakHourDeliveries = 0;
+
+    orders.forEach(order => {
+      order.shopOrders.forEach(shopOrder => {
+        const isDeliveredByMe = 
+          (shopOrder.deliveredBy && String(shopOrder.deliveredBy) === String(deliveryBoyId)) ||
+          (String(shopOrder.assignedDeliveryBoy) === String(deliveryBoyId) && shopOrder.status === "delivered");
+        
+        if (
+          isDeliveredByMe &&
+          shopOrder.status === "delivered" &&
+          shopOrder.deliveredAt &&
+          new Date(shopOrder.deliveredAt) >= startOfMonth
+        ) {
+          monthDelivered.push(shopOrder);
+          const hour = new Date(shopOrder.deliveredAt).getHours();
+          if (PEAK_HOURS.includes(hour)) {
+            peakHourDeliveries++;
+          }
+        }
+      });
+    });
+
+    const deliveries = monthDelivered.length;
+    const payment = calculatePaymentWithBonuses(deliveries, 'monthly');
+    
+    // Add peak hour bonus
+    const peakHourBonus = peakHourDeliveries * PEAK_HOUR_BONUS;
+    payment.bonus += peakHourBonus;
+    payment.total = payment.basePayment + payment.bonus;
+    payment.peakHourDeliveries = peakHourDeliveries;
+    payment.peakHourBonus = peakHourBonus;
+
+    console.log('Monthly payment response:', { deliveries, ...payment });
+
+    res.json({ 
+      success: true, 
+      deliveries,
+      basePayment: payment.basePayment,
+      bonus: payment.bonus,
+      total: payment.total,
+      peakHourDeliveries: payment.peakHourDeliveries,
+      peakHourBonus: payment.peakHourBonus
+    });
+  } catch (err) {
+    console.error("Monthly Payment Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch monthly payment" });
   }
 };

@@ -31,6 +31,12 @@ const shopSchema = new mongoose.Schema({
         ref: "Item"
     }
    ],
+   reels:[
+    {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reel"
+    }
+   ],
    
  
 },{timestamps:true})

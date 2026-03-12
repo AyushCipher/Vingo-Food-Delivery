@@ -122,7 +122,7 @@ function Nav() {
           {userData?.role === "owner" && (
             <>
               {/* DESKTOP BUTTONS */}
-              <div className="hidden md:flex items-center gap-7 ml-5">
+              <div className="hidden md:flex items-center gap-7 ">
                 {/* ADD FOOD BUTTON — only if shop exists */}
                 {myShopData && (
                   <button
@@ -242,15 +242,27 @@ function Nav() {
                 </div>
 
                 {userData?.role === "user" && (
-                  <div
-                    className="md:hidden text-[#ff4d2d] font-medium cursor-pointer"
-                    onClick={() => {
-                      navigate("/my-orders");
-                      setShowInfo(false);
-                    }}
-                  >
-                    My Orders
-                  </div>
+                  <>
+                    <div
+                      className="md:hidden text-[#ff4d2d] font-medium cursor-pointer"
+                      onClick={() => {
+                        navigate("/my-orders");
+                        setShowInfo(false);
+                      }}
+                    >
+                      My Orders
+                    </div>
+
+                    <div
+                      className="text-[#ff4d2d] font-medium cursor-pointer hover:text-orange-600"
+                      onClick={() => {
+                        navigate("/saved-loops");
+                        setShowInfo(false);
+                      }}
+                    >
+                      Saved Loops
+                    </div>
+                  </>
                 )}
 
                 {/* LOGOUT */}

@@ -11,15 +11,7 @@ export const addItem = async (req, res) => {
       type, 
       price,
       description,
-      ingredients,
-      preparationTime,
-      servingSize,
-      spiceLevel,
-      allergens,
-      calories,
-      protein,
-      carbs,
-      fat
+      availability
     } = req.body;
     
     const shop = await Shop.findOne({ owner: req.userId });
@@ -65,12 +57,7 @@ export const addItem = async (req, res) => {
       servingSize: servingSize || "1 serving",
       spiceLevel: spiceLevel || "",
       allergens: parsedAllergens,
-      nutritionInfo: {
-        calories: calories || 0,
-        protein: protein || "",
-        carbs: carbs || "",
-        fat: fat || "",
-      },
+      availability: availability !== "false"
     });
 
     shop.items.push(item._id);
@@ -172,10 +159,7 @@ export const editItem = async (req, res) => {
       servingSize,
       spiceLevel,
       allergens,
-      calories,
-      protein,
-      carbs,
-      fat
+      availability
     } = req.body;
     const { itemId } = req.params;
 
@@ -210,12 +194,7 @@ export const editItem = async (req, res) => {
       servingSize: servingSize || "1 serving",
       spiceLevel: spiceLevel || "",
       allergens: parsedAllergens,
-      nutritionInfo: {
-        calories: calories || 0,
-        protein: protein || "",
-        carbs: carbs || "",
-        fat: fat || "",
-      },
+      ...(availability !== undefined && { availability: availability !== "false" })
     };
 
     if (image) {
@@ -233,7 +212,18 @@ export const editItem = async (req, res) => {
     }
 
     await item.populate("shop");
-    
+
+    // --- Real-time emit for availability update ---
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("item:availabilityUpdated", {
+        itemId: item._id,
+        availability: item.availability,
+        shopId: item.shop?._id,
+        city: item.shop?.city,
+      });
+    }
+
     return res.status(200).json(item);
   } catch (error) {
     return res.status(500).json({ message: `Edit item error: ${error}` });

@@ -3,7 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { serverUrl } from "../App";
 import FoodCard from "../components/FoodCard";
-import { FaMapMarkerAlt, FaUtensils, FaStoreAlt, FaArrowLeft } from "react-icons/fa";
+import {
+  FaMapMarkerAlt,
+  FaUtensils,
+  FaStoreAlt,
+  FaArrowLeft,
+} from "react-icons/fa";
 
 function ShopItems() {
   const { shopId } = useParams();
@@ -11,29 +16,28 @@ function ShopItems() {
   const [shop, setShop] = useState(null);
   const navigate = useNavigate();
 
-  // ✅ Fetch shop + items
+  // Fetch shop + items
   const handleGetShopItems = async () => {
     try {
       const result = await axios.get(
         `${serverUrl}/api/item/getitemsbyshop/${shopId}`,
-        { withCredentials: true }
+        { withCredentials: true },
       );
       setItems(result.data || []);
-
     } catch (error) {
       console.log(error);
     }
   };
 
-    const handleGetShop = async () => {
+  const handleGetShop = async () => {
     try {
       const result = await axios.get(
         `${serverUrl}/api/shop/getshopbyid/${shopId}`,
-        { withCredentials: true }
+        { withCredentials: true },
       );
-    
+
       setShop(result.data);
-  console.log(result.data)
+      console.log(result.data);
     } catch (error) {
       console.log(error);
     }
@@ -41,7 +45,7 @@ function ShopItems() {
 
   useEffect(() => {
     handleGetShopItems();
-    handleGetShop()
+    handleGetShop();
   }, [shopId]);
 
   return (
@@ -55,7 +59,7 @@ function ShopItems() {
         <span className="hidden md:inline">Back</span>
       </button>
 
-      {/* 🔥 Shop Hero Section */}
+      {/* Shop Hero Section */}
       {shop && (
         <div className="relative w-full h-64 md:h-80 lg:h-96">
           <img
@@ -68,16 +72,16 @@ function ShopItems() {
             <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">
               {shop.name}
             </h1>
-            {shop.description && (
+            {/* {shop.description && (
               <p className="text-gray-200 text-sm md:text-lg mt-3 max-w-2xl">
                 {shop.description}
               </p>
-            )}
+            )} */}
           </div>
         </div>
       )}
 
-      {/* 🔥 Shop Info */}
+      {/* Shop Info */}
       {shop && (
         <div className="max-w-4xl mx-auto px-6 py-6 text-center">
           <div className="flex items-center justify-center gap-2 text-gray-600">
@@ -89,7 +93,7 @@ function ShopItems() {
         </div>
       )}
 
-      {/* 🔥 Items Section */}
+      {/* Items Section */}
       <div className="max-w-7xl mx-auto px-6 py-10">
         <h2 className="flex items-center justify-center gap-3 text-3xl font-bold mb-10 text-gray-800">
           <FaUtensils className="text-red-500" />

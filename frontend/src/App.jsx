@@ -9,7 +9,7 @@ import Home from './pages/Home'
 import getCity from './hooks/getCity'
 import getAllShops from './hooks/getAllShops'
 import EditShop from './pages/EditShop'
-import { setShop, setSocket } from './redux/userSlice'
+import { setShop } from './redux/userSlice'
 import getCurrentShop from './hooks/getCurrentShop'
 
 import { ToastContainer } from "react-toastify";
@@ -25,53 +25,45 @@ import OrderPlaced from './pages/OrderPlaced'
 import MyOrders from './pages/MyOrders'
 import getOwnerPendingOrders from './hooks/getOwnerPendingOrders'
 import PendingOrders from './pages/PendingOrders'
-import { io } from 'socket.io-client'
+import { getSocket } from './socket'
 import updateLocation from './hooks/updateLocation'
 import TrackOrderPage from './pages/TrackOrderPage'
 import MyDeliveredOrders from './pages/MyDeliveredOrders'
 import ShopItems from './pages/ShopItems'
 import ProductDetails from './pages/ProductDetails'
+import NotFound from './pages/NotFound';
+import Reels from './pages/Reels'
+import useGetAllReels from './hooks/useGetAllReels';
+import UploadReel from './pages/UploadReel';
+import SavedLoops from './pages/SavedLoops';
+import MyReels from './pages/MyReels';
+import EditReel from './pages/EditReel';
+import DeliveryBoyPayment from './pages/DeliveryBoyPayment';
 
 // Use Vite's built-in env detection - import.meta.env.DEV is true in development
 export const serverUrl = import.meta.env.DEV 
   ? "http://localhost:8000" 
-  : "https://vingo-food-delivery-zvzq.onrender.com"
+  : import.meta.env.VITE_SERVER_URL
+
 
 
 function App() {
-  const {userData, allShops, socket} = useSelector(state => state.user)
- 
+  const { userData } = useSelector(state => state.user);
+
   getCurrentUser();
   getCity();
   getCurrentShop();
-  useGetShopsByCity(); 
+  useGetShopsByCity();
   getItemsByCity();
-  getOwnerPendingOrders()
-  updateLocation()
-  
-  const dispatch = useDispatch()
+  getOwnerPendingOrders();
+  updateLocation();
+  useGetAllReels();
 
+  // Initialize socket singleton
   useEffect(() => {
-    const socketInstance = io(serverUrl, { withCredentials: true });
-    dispatch(setSocket(socketInstance));
-
-    socketInstance.on("connect", () => {
-      console.log("Socket connected:", socketInstance.id);
-      if (userData?._id) {
-        console.log("Emitting identify for user:", userData._id);
-        socketInstance.emit("identify", { userId: userData._id });
-      }
-    });
-
-    // Also emit identify when userData becomes available after socket is connected
-    if (socketInstance.connected && userData?._id) {
-      console.log("Re-emitting identify for user:", userData._id);
-      socketInstance.emit("identify", { userId: userData._id });
+    if (userData?._id) {
+      getSocket(userData._id);
     }
-
-    return () => {
-      socketInstance.disconnect();
-    };
   }, [userData?._id]);
 
   return (
@@ -92,7 +84,16 @@ function App() {
         <Route path="/my-delivered-orders" element={userData ? <MyDeliveredOrders /> : <Navigate to="/signin" />} />
         <Route path="/track-order/:orderId" element={userData ? <TrackOrderPage /> : <Navigate to="/signin" />} />
         <Route path="/shop-items/:shopId" element={userData ? <ShopItems /> : <Navigate to="/signin" />} />
+        <Route path="/reels" element={userData ? <Reels /> : <Navigate to="/signin" />} />
+        <Route path="/upload-reel" element={userData ? <UploadReel /> : <Navigate to="/signin" />} />
+        <Route path="/my-reels" element={userData ? <MyReels /> : <Navigate to="/signin" />} />
+        <Route path="/edit-reel/:reelId" element={userData ? <EditReel /> : <Navigate to="/signin" />} />
+        <Route path="/saved-loops" element={userData ? <SavedLoops /> : <Navigate to="/signin" />} />
         <Route path="/product/:itemId" element={userData ? <ProductDetails /> : <Navigate to="/signin" />} />
+        <Route path="/delivery-payment" element={userData ? <DeliveryBoyPayment /> : <Navigate to="/signin" />} />
+
+        {/* 404 Route - must be last */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {/* ⭐ Toast works globally */}

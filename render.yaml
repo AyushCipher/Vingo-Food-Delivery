@@ -42,6 +42,10 @@ services:
     envVars:
       - key: VITE_SERVER_URL
         sync: false
+      - key: VITE_GEOAPIKEY
+        sync: false
+      - key: VITE_RAZORPAY_KEY_ID
+        sync: false
     routes:
       - type: rewrite
         source: /*
