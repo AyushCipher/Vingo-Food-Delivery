@@ -10,6 +10,7 @@ import itemRouter from "./routes/item.routes.js"
 import orderRouter from "./routes/order.routes.js"
 import reviewRouter from "./routes/review.routes.js"
 import reelRouter from "./routes/reel.routes.js"
+import chatRouter from "./routes/chat.routes.js"
 import http from "http"
 import { Server } from "socket.io"
 import socketHandler from "./socket.js"
@@ -59,6 +60,7 @@ app.use("/api/item", itemRouter)
 app.use("/api/order", orderRouter)
 app.use("/api/review", reviewRouter)
 app.use("/api/reel", reelRouter)
+app.use("/api/chat", chatRouter)
 
 socketHandler(io)
 

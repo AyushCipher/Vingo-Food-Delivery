@@ -30,9 +30,18 @@ export default function SignUp() {
   const handleSignUp = async () => {
     setLoading(true);
     try {
+      if (!fullName || !email || !password || !role) {
+        toast.error("All fields are required.");
+        setLoading(false);
+        return;
+      }
       const normalizedRole =
         role === "DeliveryBoy" ? "deliveryBoy" : role.toLowerCase();
-
+      if (!["user", "owner", "deliveryboy", "deliveryBoy"].includes(normalizedRole)) {
+        toast.error("Invalid role selected.");
+        setLoading(false);
+        return;
+      }
       const result = await axios.post(`${serverUrl}/api/auth/signup`,
         { 
           fullName, 
@@ -43,22 +52,17 @@ export default function SignUp() {
         },
         { withCredentials: true }
       );
-
       dispatch(setUserData(result.data));
-
       toast.success("Account created successfully!");
-
     } catch (error) {
-
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else {
         toast.error("Something went wrong. Please try again.");
       }
-
       console.log(error);
     } finally {
-      setLoading(false);   
+      setLoading(false);
     }
   };
 

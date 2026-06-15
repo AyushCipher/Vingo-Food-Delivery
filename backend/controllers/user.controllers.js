@@ -5,15 +5,17 @@ import User from "../models/user.model.js"
 export const getCurrentUser = async (req,res)=>{
   try {
     const userId = req.userId;
-    const user = await User.findById(userId).populate("savedReels");
-
-    if(!user){
-        return res.status(400).json({ message: "User not found"})
+    if (!userId) {
+      console.error("getCurrentUser error: userId missing from request. Possible auth/token issue.");
+      return res.status(401).json({ message: "Unauthorized: userId missing" });
     }
-
+    const user = await User.findById(userId).populate("savedReels");
+    if(!user){
+        return res.status(404).json({ message: "User not found"})
+    }
     return res.status(200).json(user);
-
   } catch (error) {
+    console.error("getCurrentUser error:", error);
     return res.status(500).json({message: `Get current user error: ${error}`})
   }
 }
@@ -22,29 +24,27 @@ export const getCurrentUser = async (req,res)=>{
 export const updateUserLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const userId = req.userId; // JWT middleware se
-
+    const userId = req.userId;
+    if (!userId) {
+      console.error("updateUserLocation error: userId missing from request. Possible auth/token issue.");
+      return res.status(401).json({ success: false, message: "Unauthorized: userId missing" });
+    }
     // Convert to numbers and validate
     const lat = Number(latitude);
     const lng = Number(longitude);
-
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return res.status(400).json({
         success: false,
         message: "Invalid coordinates"
       });
     }
-
     console.log("📍 Location update for user:", userId, "coords:", { lat, lng });
-
-    // DB me user ki location update karo
     await User.findByIdAndUpdate(userId, {
       location: {
         type: "Point",
         coordinates: [lng, lat]  // GeoJSON is [longitude, latitude]
       }
     },{new:true});
-
     // Socket se broadcast karo (agar real-time chahiye)
     const io = req.app.get("io");
     if (io) {
@@ -55,7 +55,6 @@ export const updateUserLocation = async (req, res) => {
         at: new Date()
       });
     }
-
     return res.json({
       success: true,
       message: "Location updated"

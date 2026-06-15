@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { setCity } from "../redux/userSlice";
 
-function getCity() {
+function useCity() {
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -38,4 +38,4 @@ function getCity() {
   }, [dispatch]);
 }
 
-export default getCity;
+export default useCity;

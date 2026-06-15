@@ -59,12 +59,15 @@ function Nav() {
 
   // ---- SEARCH ----
   const handleSearchItems = async () => {
+    if (!city || !input) {
+      dispatch(setSearchItems(null));
+      return;
+    }
     try {
       const result = await axios.get(
         `${serverUrl}/api/user/search-items?city=${city}&query=${input}`,
         { withCredentials: true }
       );
-
       dispatch(setSearchItems(result.data));
     } catch {
       dispatch(setSearchItems(null));

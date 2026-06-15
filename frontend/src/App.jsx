@@ -40,6 +40,7 @@ import SavedLoops from './pages/SavedLoops';
 import MyReels from './pages/MyReels';
 import EditReel from './pages/EditReel';
 import DeliveryBoyPayment from './pages/DeliveryBoyPayment';
+import ChatWidget from './components/ChatWidget';
 
 // Use Vite's built-in env detection - import.meta.env.DEV is true in development
 export const serverUrl = import.meta.env.DEV 
@@ -98,6 +99,14 @@ function App() {
         {/* 404 Route - must be last */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      {/* Chat Widget */}
+      {userData && (
+        <ChatWidget 
+          userId={userData?._id} 
+          userRole={userData?.role} 
+        />
+      )}
 
       {/* ⭐ Toast works globally */}
       <ToastContainer position="top-center" autoClose={2500} />

@@ -9,16 +9,14 @@ function getItemsByCity() {
     const {city,userData} = useSelector(state => state.user) 
 
     useEffect(() => {
-        if(userData?.role == "user"){
+        if (userData?.role === "user" && city) {
             const fetchItems = async () => {
                 const result = await axios.get(`${serverUrl}/api/item/getitemsbycity/${city}`, {withCredentials:true})
                 dispatch(setItemsOfCity(result.data))
-                console.log(result.data)
             }
-            fetchItems() 
+            fetchItems()
         }
- 
-    },[city,userData])
+    }, [city, userData])
 }
 
 export default getItemsByCity
