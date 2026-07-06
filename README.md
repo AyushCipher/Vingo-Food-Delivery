@@ -75,16 +75,6 @@ sequenceDiagram
   API->>DB: Store conversation history
   API-->>UI: Rule-based or Gemini response
 ```
-
-## Multi-Agent / Multi-Role Architecture
-
-This repository does not use an autonomous multi-agent runtime. Instead, it implements a multi-role product architecture:
-
-- Customers discover food, manage orders, and track deliveries
-- Restaurant owners manage shops, items, reels, and incoming orders
-- Delivery partners accept assignments, update locations, and verify delivery via OTP
-- The support assistant acts as a specialized conversational layer for common support scenarios
-
 ## Tech Stack
 
 | Layer | Technologies |
