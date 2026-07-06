@@ -287,19 +287,19 @@ npm run dev
 
 ### Home Screen
 
-_Add a screenshot of the customer home feed here._
+_Screenshot of the customer home feed._
 
 ### Food Reels
 
-_Add a screenshot of the vertical reels feed here._
+_Screenshot of the vertical reels feed._
 
 ### Owner Dashboard
 
-_Add a screenshot of the owner order-management view here._
+_Screenshot of the owner order-management view._
 
 ### Chat Support
 
-_Add a screenshot of the chatbot UI here._
+_Screenshot of the chatbot UI._
 
 ## Challenges Solved
 
@@ -333,8 +333,4 @@ _Add a screenshot of the chatbot UI here._
 - Introduce analytics dashboards for conversion, retention, and delivery SLA metrics
 - Add admin moderation tools for reported reels and reviews
 - Harden rate limiting, audit logging, and input validation across public endpoints
-
-## License
-
-ISC, as declared in the backend package configuration. Add a root-level `LICENSE` file if you want to publish the project with an explicit repository-wide license.
 
