@@ -22,7 +22,7 @@ const ensureInitialized = () => {
 
   if (!admin.apps.length) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.cert(serviceAccount),
     });
   }
 
