@@ -4,10 +4,9 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addToCart,
-  updateQuantity,
   updateItemRating,
 } from "../redux/userSlice";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
 import { toast } from "react-toastify";
@@ -32,7 +31,7 @@ function ProductDetails() {
   const { itemId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { userData, cartItems } = useSelector((state) => state.user);
+  const { userData } = useSelector((state) => state.user);
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -307,6 +306,7 @@ function ProductDetails() {
             type="button"
             onClick={() => setNewRating(star)}
             className="focus:outline-none"
+            aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
           >
             {star <= newRating ? (
               <FaStar className="text-yellow-400 text-2xl hover:scale-110 transition-transform" />
@@ -512,6 +512,7 @@ function ProductDetails() {
                   <button
                     onClick={handleDecrease}
                     className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    aria-label="Decrease quantity"
                   >
                     <FaMinus className="text-gray-600" />
                   </button>
@@ -521,6 +522,7 @@ function ProductDetails() {
                   <button
                     onClick={handleIncrease}
                     className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    aria-label="Increase quantity"
                   >
                     <FaPlus className="text-gray-600" />
                   </button>
@@ -594,12 +596,14 @@ function ProductDetails() {
                     <button
                       onClick={handleEditReview}
                       className="text-purple-600 hover:text-purple-800 p-2"
+                      aria-label="Edit review"
                     >
                       <FaEdit />
                     </button>
                     <button
                       onClick={handleDeleteReview}
                       className="text-red-500 hover:text-red-700 p-2"
+                      aria-label="Delete review"
                     >
                       <FaTrash />
                     </button>

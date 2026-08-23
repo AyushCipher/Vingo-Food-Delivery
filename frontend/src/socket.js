@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-import { serverUrl } from "./App";
+import { serverUrl } from "./config";
 
 let socket;
 

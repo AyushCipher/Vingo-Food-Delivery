@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../config'
 import { toast } from 'react-toastify'
 import { MdOutlineKeyboardBackspace } from "react-icons/md"
 import { FaVideo } from "react-icons/fa"

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../config'
 import { toast } from 'react-toastify'
 import { MdKeyboardBackspace } from "react-icons/md"
 import { FaSave } from "react-icons/fa"
@@ -83,8 +83,8 @@ function EditReel() {
         setSaving(true)
 
         try {
-            const response = await axios.put(
-                `${serverUrl}/api/reel/edit/${reelId}`, 
+            await axios.put(
+                `${serverUrl}/api/reel/edit/${reelId}`,
                 {
                     caption,
                     itemId: selectedItem || null

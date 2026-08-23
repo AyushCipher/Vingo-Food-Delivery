@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,7 @@ import { MdOutlineShoppingBag } from "react-icons/md";
 import { ClipLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { setOwnerPendingOrders, setDeliveryBoys, setPendingOrdersCount } from "../redux/userSlice";
 import { getSocket } from "../socket";
 
@@ -29,7 +29,7 @@ export default function PendingOrders() {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { ownerPendingOrders, deliveryBoys, userData, pendingOrdersCount } = useSelector(
+  const { ownerPendingOrders, userData } = useSelector(
     (state) => state.user
   );
   // Always use singleton socket instance for real-time events
@@ -39,7 +39,7 @@ export default function PendingOrders() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleStatusUpdated = (data) => {
+    const handleStatusUpdated = () => {
       // Option 1: Re-fetch all orders for full accuracy (recommended for now)
       setTimeout(async () => {
         try {
@@ -74,7 +74,7 @@ export default function PendingOrders() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleDeliveryAccepted = ({ orderId, shopOrderId, deliveryBoy }) => {
+    const handleDeliveryAccepted = ({ orderId, deliveryBoy }) => {
       console.log("🚚 Delivery boy accepted:", deliveryBoy);
       
       // Update local state with assigned delivery boy
@@ -180,7 +180,7 @@ export default function PendingOrders() {
         });
 
         dispatch(setOwnerPendingOrders(res.data.orders || []));
-      } catch (err) {
+      } catch {
         toast.error("Failed to load pending orders", {
           position: "top-right",
         });
@@ -225,7 +225,7 @@ export default function PendingOrders() {
       toast.success("Order status updated", {
         position: "top-right",
       });
-    } catch (err) {
+    } catch {
       toast.error("Failed to update order status", {
         position: "top-right",
       });

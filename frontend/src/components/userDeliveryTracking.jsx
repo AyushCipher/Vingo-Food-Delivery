@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import scooter from "../assets/scooter.png";
 import home from "../assets/home.png";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { ClipLoader } from "react-spinners";
 
 const PRIMARY = "#ff4d2d";

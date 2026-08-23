@@ -5,7 +5,7 @@ import { IoIosSearch } from "react-icons/io";
 import { LuShoppingCart } from "react-icons/lu";
 import { RxCross2 } from "react-icons/rx";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { setSearchItems, setShop, setUserData, setPendingOrdersCount } from "../redux/userSlice";
 import { FiPlus } from "react-icons/fi";
 import { TbReceipt2 } from "react-icons/tb";
@@ -52,7 +52,7 @@ function Nav() {
 
       toast.success("Logged out successfully");
       navigate("/signin");
-    } catch (error) {
+    } catch {
       toast.error("Logout failed. Please try again");
     }
   };
@@ -200,6 +200,7 @@ useEffect(() => {
                   <button
                     onClick={() => navigate("/additem")}
                     className="p-2.5 rounded-full bg-gradient-to-r from-[#ff7a45] to-[#ff4d2d] text-white shadow-md active:scale-95"
+                    aria-label="Add item"
                   >
                     <FiPlus size={18} />
                   </button>
@@ -209,6 +210,7 @@ useEffect(() => {
                 <button
                   onClick={() => navigate("/pending-orders")}
                   className="p-2.5 rounded-full bg-white border border-[#ff4d2d]/30 text-[#ff4d2d] shadow relative active:scale-95"
+                  aria-label={pendingOrdersCount ? `Pending orders, ${pendingOrdersCount} pending` : "Pending orders"}
                 >
                   <TbReceipt2 size={18} />
                   <span className="absolute -right-1 -top-1 bg-[#ff4d2d] text-white text-[10px] px-[6px] py-[1px] rounded-full">

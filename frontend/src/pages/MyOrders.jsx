@@ -7,7 +7,7 @@ import { MdKeyboardBackspace } from "react-icons/md";
 import { ClipLoader } from "react-spinners";
 import { toast } from "react-toastify";
 
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { setMyOrders } from "../redux/userSlice";
 
 /* ---------------- Helpers ---------------- */
@@ -95,7 +95,7 @@ function MyOrders() {
             position: "top-right",
           });
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to load orders", {
           position: "top-right",
         });
@@ -114,7 +114,7 @@ function MyOrders() {
     if (!userData?._id) return;
     const socket = getSocket(userData._id);
 
-    const handleStatusUpdate = async (data) => {
+    const handleStatusUpdate = async () => {
       // Re-fetch orders to get fresh data
       try {
         const res = await axios.get(`${serverUrl}/api/order/getmy`, {
@@ -129,7 +129,7 @@ function MyOrders() {
       toast.info("Order status updated", { position: "top-right" });
     };
 
-    const handleDeliveryCompleted = async (data) => {
+    const handleDeliveryCompleted = async () => {
       try {
         const res = await axios.get(`${serverUrl}/api/order/getmy`, {
           withCredentials: true,

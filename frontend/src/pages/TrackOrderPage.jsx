@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import UserDeliveryTracking from "../components/userDeliveryTracking";
 import { MdKeyboardBackspace, MdLocationOn, MdPhone } from "react-icons/md";
 import { ClipLoader } from "react-spinners";
@@ -28,7 +28,7 @@ export default function TrackOrderPage() {
       if (res.data.success) {
         setOrder(res.data.order);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to fetch order", { position: "top-right" });
     } finally {
       setLoading(false);

@@ -1,10 +1,10 @@
 import axios from 'axios'
 import React, { useEffect } from 'react'
-import { serverUrl } from '../App'
+import { serverUrl } from '../config'
 import { useDispatch } from 'react-redux'
-import { setAllShops, setUserData } from '../redux/userSlice'
+import { setAllShops } from '../redux/userSlice'
 
-function getAllShops() {
+function useGetAllShops() {
    const dispatch = useDispatch()
    
    useEffect(() => {
@@ -19,4 +19,4 @@ function getAllShops() {
    },[])
 }
 
-export default getAllShops
+export default useGetAllShops

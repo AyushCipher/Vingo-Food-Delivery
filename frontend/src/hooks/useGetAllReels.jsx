@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { useDispatch, useSelector } from "react-redux";
 import { setReelData } from "../redux/reelSlice";
 
@@ -16,7 +16,7 @@ const useGetAllReels = () => {
             try {
                 const response = await axios.get(`${serverUrl}/api/reel/getAll?city=${encodeURIComponent(city)}`, { withCredentials: true });
                 dispatch(setReelData(response.data));
-            } catch (error) {
+            } catch {
                 // Silently fail
             }
         };

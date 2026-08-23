@@ -15,7 +15,6 @@ import { getSocket } from '../socket';
 function UserHomeTabs() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' or 'loop'
   const { city, shopsOfCity, itemsOfCity, searchItems } = useSelector((state) => state.user);
-  const { reelData } = useSelector(state => state.reel);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

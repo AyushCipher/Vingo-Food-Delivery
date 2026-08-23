@@ -126,6 +126,7 @@ function FoodCard({ data }) {
             <button
               onClick={handleDecrease}
               className="px-2 py-1 hover:bg-gray-100 transition"
+              aria-label="Decrease quantity"
             >
               <FaMinus size={12} />
             </button>
@@ -133,6 +134,7 @@ function FoodCard({ data }) {
             <button
               onClick={handleIncrease}
               className="px-2 py-1 hover:bg-gray-100 transition"
+              aria-label="Increase quantity"
             >
               <FaPlus size={12} />
             </button>
@@ -143,6 +145,7 @@ function FoodCard({ data }) {
                   : "bg-[#ff4d2d]"
               } text-white px-3 py-2 transition-colors`}
               onClick={handleAddToCart}
+              aria-label="Add to cart"
             >
               <FaShoppingCart size={14} />
             </button>

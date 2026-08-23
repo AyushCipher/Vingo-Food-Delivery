@@ -1,8 +1,8 @@
 import axios from "axios";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setOwnerPendingOrders, setPendingOrdersCount } from "../redux/userSlice";
-import { serverUrl } from "../App";
+import { setOwnerPendingOrders } from "../redux/userSlice";
+import { serverUrl } from "../config";
 
 function useOwnerPendingOrders() {
   const dispatch = useDispatch();

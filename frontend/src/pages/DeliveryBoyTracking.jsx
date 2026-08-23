@@ -71,8 +71,6 @@ export default function DeliveryBoyTracking({ currentOrder }) {
   const prevCustomerRef = useRef({ lat: null, lng: null });
   const routeFetchedRef = useRef(false);
 
-  if (!currentOrder) return null;
-
   /* ---------------- COORDS ---------------- */
   const deliveryLat = currentOrder?.deliveryBoyLocation?.lat;
   const deliveryLng = currentOrder?.deliveryBoyLocation?.lng;
@@ -128,6 +126,8 @@ export default function DeliveryBoyTracking({ currentOrder }) {
   }, [customerLat, customerLng]); // ✅ only re-fetch when CUSTOMER changes, not delivery boy
 
   const handleMapReady = useCallback(() => setMapReady(true), []);
+
+  if (!currentOrder) return null;
 
   /* ---------------- UI ---------------- */
   return (

@@ -3,7 +3,7 @@ import { FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { MdKeyboardBackspace } from "react-icons/md";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { useDispatch } from "react-redux";
 import { setShop } from "../redux/userSlice";
 import { toast } from "react-toastify";

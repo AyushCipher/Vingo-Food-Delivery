@@ -3,7 +3,7 @@ import { MdOutlineKeyboardBackspace } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
 import ReelCard from '../components/ReelCard';
 import axios from 'axios';
-import { serverUrl } from '../App';
+import { serverUrl } from '../config';
 import ClipLoader from 'react-spinners/ClipLoader';
 
 function SavedLoops() {

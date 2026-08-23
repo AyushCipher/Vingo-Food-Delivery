@@ -177,7 +177,7 @@ function CartPage() {
                 <div className="flex justify-between font-bold text-lg border-t pt-3">
                   <span>Total</span>
                   <span className="text-[#ff4d2d]">
-                    ₹{(totalAmount + 40).toFixed(2)}
+                    ₹{finalTotal.toFixed(2)}
                   </span>
                 </div>
               </div>

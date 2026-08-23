@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { serverUrl } from '../App';
+import { serverUrl } from '../config';
 import { MdOutlineKeyboardBackspace, MdDeliveryDining } from 'react-icons/md';
 import { FaMoneyBillWave, FaGift, FaStar, FaTrophy } from 'react-icons/fa';
 import { BiTimer } from 'react-icons/bi';

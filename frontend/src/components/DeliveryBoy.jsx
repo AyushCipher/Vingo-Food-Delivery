@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getSocket } from "../socket";
 import Nav from "./Nav";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import DeliveryBoyTracking from "../pages/DeliveryBoyTracking";
 import {
   BarChart,
@@ -43,9 +43,6 @@ const buildHourlyStats = (rawStats = []) => {
 export default function DeliveryBoy() {
   const { userData } = useSelector((state) => state.user);
   const navigate = useNavigate();
-
-  /* ROLE GUARD */
-  if (userData?.role !== "deliveryBoy") return null;
 
   /* ================= STATE ================= */
   const [location, setLocation] = useState({ lat: null, lng: null });
@@ -183,8 +180,9 @@ export default function DeliveryBoy() {
   const acceptOrder = async (id) => {
     try {
       setAcceptingOrder(true);
-      const res = await axios.get(
+      const res = await axios.post(
         `${serverUrl}/api/order/accept-assignment/${id}`,
+        {},
         { withCredentials: true }
       );
       if (res.data.success) {
@@ -251,6 +249,9 @@ export default function DeliveryBoy() {
   };
 
 
+
+  /* ROLE GUARD — after all hooks, so hook count stays constant across renders */
+  if (userData?.role !== "deliveryBoy") return null;
 
   /* ================= UI ================= */
   return (

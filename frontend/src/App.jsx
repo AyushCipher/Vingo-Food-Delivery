@@ -1,64 +1,66 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import SignUp from './pages/SignUp'
-import SignIn from './pages/SignIn'
-import ForgotPassword from './pages/ForgotPassword'
-import getCurrentUser from './hooks/getCurrentUser'
-import { useDispatch, useSelector } from 'react-redux'
-import Home from './pages/Home'
+import useGetCurrentUser from './hooks/getCurrentUser'
+import { useSelector } from 'react-redux'
 import getCity from './hooks/getCity'
-import getAllShops from './hooks/getAllShops'
-import EditShop from './pages/EditShop'
-import { setShop } from './redux/userSlice'
-import getCurrentShop from './hooks/getCurrentShop'
-import DeliveryBoy from './components/DeliveryBoy'
+import useGetCurrentShop from './hooks/getCurrentShop'
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import AddItem from './pages/AddItem'
-import EditItem from './pages/EditItem'
 import useGetShopsByCity from "./hooks/useGetShopsByCity";
-import getItemsByCity from './hooks/getItemsByCity'
-import CartPage from './pages/CartPage'
-import CheckoutPage from './pages/CheckoutPage'
-import OrderPlaced from './pages/OrderPlaced'
-import MyOrders from './pages/MyOrders'
+import useGetItemsByCity from './hooks/getItemsByCity'
 import getOwnerPendingOrders from './hooks/getOwnerPendingOrders'
-import PendingOrders from './pages/PendingOrders'
 import { getSocket } from './socket'
-import updateLocation from './hooks/updateLocation'
-import TrackOrderPage from './pages/TrackOrderPage'
-import MyDeliveredOrders from './pages/MyDeliveredOrders'
-import ShopItems from './pages/ShopItems'
-import ProductDetails from './pages/ProductDetails'
-import NotFound from './pages/NotFound';
-import Reels from './pages/Reels'
+import useUpdateLocation from './hooks/updateLocation'
 import useGetAllReels from './hooks/useGetAllReels';
-import UploadReel from './pages/UploadReel';
-import SavedLoops from './pages/SavedLoops';
-import MyReels from './pages/MyReels';
-import EditReel from './pages/EditReel';
-import DeliveryBoyPayment from './pages/DeliveryBoyPayment';
 import ChatWidget from './components/ChatWidget';
+import { ClipLoader } from 'react-spinners';
 
-// Use Vite's built-in env detection - import.meta.env.DEV is true in development
-export const serverUrl = import.meta.env.DEV 
-  ? "http://localhost:8000" 
-  : "https://vingo-backend-194r.onrender.com"
+// Route-level code splitting: each page loads its own chunk on first visit
+// instead of all of them (plus their dependencies like Recharts/Leaflet)
+// being bundled into the single initial download.
+const SignUp = lazy(() => import('./pages/SignUp'))
+const SignIn = lazy(() => import('./pages/SignIn'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const Home = lazy(() => import('./pages/Home'))
+const EditShop = lazy(() => import('./pages/EditShop'))
+const DeliveryBoy = lazy(() => import('./components/DeliveryBoy'))
+const AddItem = lazy(() => import('./pages/AddItem'))
+const EditItem = lazy(() => import('./pages/EditItem'))
+const CartPage = lazy(() => import('./pages/CartPage'))
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const OrderPlaced = lazy(() => import('./pages/OrderPlaced'))
+const MyOrders = lazy(() => import('./pages/MyOrders'))
+const PendingOrders = lazy(() => import('./pages/PendingOrders'))
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'))
+const MyDeliveredOrders = lazy(() => import('./pages/MyDeliveredOrders'))
+const ShopItems = lazy(() => import('./pages/ShopItems'))
+const ProductDetails = lazy(() => import('./pages/ProductDetails'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const Reels = lazy(() => import('./pages/Reels'))
+const UploadReel = lazy(() => import('./pages/UploadReel'))
+const SavedLoops = lazy(() => import('./pages/SavedLoops'))
+const MyReels = lazy(() => import('./pages/MyReels'))
+const EditReel = lazy(() => import('./pages/EditReel'))
+const DeliveryBoyPayment = lazy(() => import('./pages/DeliveryBoyPayment'))
 
-
+const RouteFallback = () => (
+  <div className="w-screen h-screen flex items-center justify-center">
+    <ClipLoader size={45} color="#ff4d2d" />
+  </div>
+)
 
 function App() {
   const { userData } = useSelector(state => state.user);
 
-  getCurrentUser();
+  useGetCurrentUser();
   getCity();
-  getCurrentShop();
+  useGetCurrentShop();
   useGetShopsByCity();
-  getItemsByCity();
+  useGetItemsByCity();
   getOwnerPendingOrders();
-  updateLocation();
+  useUpdateLocation();
   useGetAllReels();
 
   // Initialize socket singleton
@@ -70,41 +72,43 @@ function App() {
 
   return (
    <>
-      <Routes>
-        <Route path="/signup" element={!userData ? <SignUp /> : <Navigate to="/" />} />
-        <Route path="/signin" element={!userData ? <SignIn /> : <Navigate to="/" />} />
-        <Route path="/forgot-password" element={!userData ? <ForgotPassword /> : <Navigate to="/" />} />
-        <Route path="/" element={userData ? <Home /> : <Navigate to="/signin" />} />
-        <Route path="/editshop" element={userData ? <EditShop /> : <Navigate to="/signin" />} />
-        <Route path="/additem" element={userData ? <AddItem /> : <Navigate to="/signin" />} />
-        <Route path="/edititem/:itemId" element={userData ? <EditItem /> : <Navigate to="/signin" />} />
-        <Route path="/cart" element={userData ? <CartPage /> : <Navigate to="/signin" />} />
-        <Route path="/checkout" element={userData ? <CheckoutPage /> : <Navigate to="/signin" />} />
-        <Route path="/order-placed" element={userData ? <OrderPlaced /> : <Navigate to="/signin" />} />
-        <Route path="/my-orders" element={userData ? <MyOrders /> : <Navigate to="/signin" />} />
-        <Route path="/pending-orders" element={userData ? <PendingOrders /> : <Navigate to="/signin" />} />
-        <Route path="/my-delivered-orders" element={userData ? <MyDeliveredOrders /> : <Navigate to="/signin" />} />
-        <Route path="/track-order/:orderId" element={userData ? <TrackOrderPage /> : <Navigate to="/signin" />} />
-        <Route path="/shop-items/:shopId" element={userData ? <ShopItems /> : <Navigate to="/signin" />} />
-        <Route path="/reels" element={userData ? <Reels /> : <Navigate to="/signin" />} />
-        <Route path="/upload-reel" element={userData ? <UploadReel /> : <Navigate to="/signin" />} />
-        <Route path="/my-reels" element={userData ? <MyReels /> : <Navigate to="/signin" />} />
-        <Route path="/edit-reel/:reelId" element={userData ? <EditReel /> : <Navigate to="/signin" />} />
-        <Route path="/saved-loops" element={userData ? <SavedLoops /> : <Navigate to="/signin" />} />
-        <Route path="/product/:itemId" element={userData ? <ProductDetails /> : <Navigate to="/signin" />} />
-        <Route path="/delivery-payment" element={userData ? <DeliveryBoyPayment /> : <Navigate to="/signin" />} />
-        <Route path="/delivery" element={userData ? <DeliveryBoy /> : <Navigate to="/signin" />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/signup" element={!userData ? <SignUp /> : <Navigate to="/" />} />
+          <Route path="/signin" element={!userData ? <SignIn /> : <Navigate to="/" />} />
+          <Route path="/forgot-password" element={!userData ? <ForgotPassword /> : <Navigate to="/" />} />
+          <Route path="/" element={userData ? <Home /> : <Navigate to="/signin" />} />
+          <Route path="/editshop" element={userData ? <EditShop /> : <Navigate to="/signin" />} />
+          <Route path="/additem" element={userData ? <AddItem /> : <Navigate to="/signin" />} />
+          <Route path="/edititem/:itemId" element={userData ? <EditItem /> : <Navigate to="/signin" />} />
+          <Route path="/cart" element={userData ? <CartPage /> : <Navigate to="/signin" />} />
+          <Route path="/checkout" element={userData ? <CheckoutPage /> : <Navigate to="/signin" />} />
+          <Route path="/order-placed" element={userData ? <OrderPlaced /> : <Navigate to="/signin" />} />
+          <Route path="/my-orders" element={userData ? <MyOrders /> : <Navigate to="/signin" />} />
+          <Route path="/pending-orders" element={userData ? <PendingOrders /> : <Navigate to="/signin" />} />
+          <Route path="/my-delivered-orders" element={userData ? <MyDeliveredOrders /> : <Navigate to="/signin" />} />
+          <Route path="/track-order/:orderId" element={userData ? <TrackOrderPage /> : <Navigate to="/signin" />} />
+          <Route path="/shop-items/:shopId" element={userData ? <ShopItems /> : <Navigate to="/signin" />} />
+          <Route path="/reels" element={userData ? <Reels /> : <Navigate to="/signin" />} />
+          <Route path="/upload-reel" element={userData ? <UploadReel /> : <Navigate to="/signin" />} />
+          <Route path="/my-reels" element={userData ? <MyReels /> : <Navigate to="/signin" />} />
+          <Route path="/edit-reel/:reelId" element={userData ? <EditReel /> : <Navigate to="/signin" />} />
+          <Route path="/saved-loops" element={userData ? <SavedLoops /> : <Navigate to="/signin" />} />
+          <Route path="/product/:itemId" element={userData ? <ProductDetails /> : <Navigate to="/signin" />} />
+          <Route path="/delivery-payment" element={userData ? <DeliveryBoyPayment /> : <Navigate to="/signin" />} />
+          <Route path="/delivery" element={userData ? <DeliveryBoy /> : <Navigate to="/signin" />} />
 
 
-        {/* 404 Route - must be last */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* 404 Route - must be last */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
 
       {/* Chat Widget */}
       {userData && (
-        <ChatWidget 
-          userId={userData?._id} 
-          userRole={userData?.role} 
+        <ChatWidget
+          userId={userData?._id}
+          userRole={userData?.role}
         />
       )}
 

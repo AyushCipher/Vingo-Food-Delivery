@@ -12,7 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setReelData } from '../redux/reelSlice';
 import { setUserData, addToCart } from '../redux/userSlice';
 import axios from 'axios';
-import { serverUrl } from '../App';
+import { serverUrl } from '../config';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../socket';
 import { toast } from 'react-toastify';
@@ -60,7 +60,7 @@ function ReelCard({ reel, isOwnerView = false }) {
 
     const handleLike = async () => {
         try {
-            const result = await axios.get(`${serverUrl}/api/reel/like/${reel._id}`, { withCredentials: true })
+            const result = await axios.post(`${serverUrl}/api/reel/like/${reel._id}`, {}, { withCredentials: true })
             const updatedReel = result.data
 
             const updatedReels = reelData.map(r => r._id == reel._id ? updatedReel : r)
@@ -104,7 +104,7 @@ function ReelCard({ reel, isOwnerView = false }) {
 
     const handleSave = async () => {
         try {
-            const result = await axios.get(`${serverUrl}/api/reel/save/${reel._id}`, { withCredentials: true })
+            const result = await axios.post(`${serverUrl}/api/reel/save/${reel._id}`, {}, { withCredentials: true })
             dispatch(setUserData(result.data))
             const isSaved = result.data.savedReels?.some(saved => {
                 const savedId = saved._id || saved;
@@ -388,10 +388,11 @@ function ReelCard({ reel, isOwnerView = false }) {
                                                     }
                                                 }}
                                             />
-                                            <button 
+                                            <button
                                                 onClick={() => handleReply(com._id)}
                                                 disabled={!replyMessage.trim()}
                                                 className='text-orange-500 disabled:text-gray-600'
+                                                aria-label='Send reply'
                                             >
                                                 <IoSendSharp className='w-[20px] h-[20px]' />
                                             </button>
@@ -419,16 +420,21 @@ function ReelCard({ reel, isOwnerView = false }) {
 
                     <input type="text" className='px-[10px] border-b-2 border-b-orange-500 w-[85%] bg-transparent text-white placeholder:text-gray-400 outline-none h-[40px]' placeholder='Write comment...' onChange={(e) => setMessage(e.target.value)} value={message} />
 
-                    {message && <button className='absolute right-[20px] cursor-pointer' onClick={handleComment}><IoSendSharp className='w-[25px] h-[25px] text-orange-500' /></button>}
+                    {message && <button className='absolute right-[20px] cursor-pointer' onClick={handleComment} aria-label='Send comment'><IoSendSharp className='w-[25px] h-[25px] text-orange-500' /></button>}
 
                 </div>
             </div>
 
             <video ref={videoRef} autoPlay muted={isMute} loop src={reel?.video} className='w-full max-h-full object-cover' onClick={handleClick} onTimeUpdate={handleTimeUpdate} onDoubleClick={handleLikeOnDoubleClick} />
             
-            <div className='absolute top-[20px] z-[100] right-[20px]' onClick={() => setIsMute(prev => !prev)}>
+            <button
+                type='button'
+                className='absolute top-[20px] z-[100] right-[20px]'
+                onClick={() => setIsMute(prev => !prev)}
+                aria-label={isMute ? 'Unmute video' : 'Mute video'}
+            >
                 {!isMute ? <FiVolume2 className='w-[25px] h-[25px] text-white font-semibold drop-shadow-lg' /> : <FiVolumeX className='w-[25px] h-[25px] text-white font-semibold drop-shadow-lg' />}
-            </div>
+            </button>
 
             {/* Shop Name at Top Right */}
             <div className='absolute top-[60px] right-[10px] z-[100]'>
@@ -480,9 +486,10 @@ function ReelCard({ reel, isOwnerView = false }) {
                             <div className='text-orange-500 font-bold text-[14px]'>₹{reel.item?.price}</div>
                         </div>
                         {!isOwnerView && (
-                            <button 
+                            <button
                                 onClick={handleAddToCart}
                                 className='bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition-colors shadow-lg flex-shrink-0'
+                                aria-label='Add to cart'
                             >
                                 <FaShoppingCart className='w-[20px] h-[20px]' />
                             </button>
@@ -501,32 +508,32 @@ function ReelCard({ reel, isOwnerView = false }) {
 
                 <div className={`absolute right-[10px] flex flex-col gap-[20px] text-white ${isOwnerView ? 'bottom-[80px]' : 'bottom-[20px]'} justify-center`}>
                     {/* Like Button */}
-                    <div className='flex flex-col items-center cursor-pointer'>
-                        <div onClick={handleLike} className='bg-black bg-opacity-50 rounded-full p-2'>
+                    <div className='flex flex-col items-center'>
+                        <button type='button' onClick={handleLike} className='bg-black bg-opacity-50 rounded-full p-2' aria-label={reel.likes.includes(userData._id) ? 'Unlike' : 'Like'}>
                             {!reel.likes.includes(userData._id) && <GoHeart className='w-[28px] cursor-pointer h-[28px] drop-shadow-lg' />}
                             {reel.likes.includes(userData._id) && <GoHeartFill className='w-[28px] cursor-pointer h-[28px] text-red-600 drop-shadow-lg' />}
-                        </div>
+                        </button>
                         <div className='text-[14px] font-semibold drop-shadow-lg'>{reel.likes.length}</div>
                     </div>
 
                     {/* Comment Button */}
-                    <div className='flex flex-col items-center cursor-pointer' onClick={() => setShowComment(true)}>
-                        <div className='bg-black bg-opacity-50 rounded-full p-2'>
+                    <div className='flex flex-col items-center'>
+                        <button type='button' className='bg-black bg-opacity-50 rounded-full p-2' onClick={() => setShowComment(true)} aria-label='Show comments'>
                             <MdOutlineComment className='w-[28px] cursor-pointer h-[28px] drop-shadow-lg' />
-                        </div>
+                        </button>
                         <div className='text-[14px] font-semibold drop-shadow-lg'>{reel.comments.length}</div>
                     </div>
 
                     {/* Save/Edit Button */}
                     {isOwnerView ? (
-                        <div className='flex flex-col items-center cursor-pointer' onClick={() => navigate(`/edit-reel/${reel._id}`)}>
-                            <div className='bg-black bg-opacity-50 rounded-full p-2'>
+                        <div className='flex flex-col items-center'>
+                            <button type='button' className='bg-black bg-opacity-50 rounded-full p-2' onClick={() => navigate(`/edit-reel/${reel._id}`)} aria-label='Edit reel'>
                                 <FaEdit className='w-[28px] cursor-pointer h-[28px] text-orange-500 drop-shadow-lg' />
-                            </div>
+                            </button>
                         </div>
                     ) : (
-                        <div className='flex flex-col items-center cursor-pointer' onClick={handleSave}>
-                            <div className='bg-black bg-opacity-50 rounded-full p-2'>
+                        <div className='flex flex-col items-center'>
+                            <button type='button' className='bg-black bg-opacity-50 rounded-full p-2' onClick={handleSave} aria-label='Save reel'>
                                 {!userData?.savedReels?.some(saved => {
                                     const savedId = saved._id || saved;
                                     return savedId === reel._id || savedId.toString() === reel._id.toString();
@@ -539,7 +546,7 @@ function ReelCard({ reel, isOwnerView = false }) {
                                 }) && (
                                     <BsBookmarkFill className='w-[28px] cursor-pointer h-[28px] text-white drop-shadow-lg' />
                                 )}
-                            </div>
+                            </button>
                         </div>
                     )}
                 </div>

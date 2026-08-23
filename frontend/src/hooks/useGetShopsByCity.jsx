@@ -1,11 +1,11 @@
 import axios from "axios";
 import React, { useEffect } from "react";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { useDispatch, useSelector } from "react-redux";
-import { setShopsOfCity, setUserData } from "../redux/userSlice";
+import { setShopsOfCity } from "../redux/userSlice";
 
 
-function getShopsByCity() {
+function useGetShopsByCity() {
   const dispatch = useDispatch();
   const { city, userData } = useSelector((state) => state.user);
   
@@ -18,15 +18,13 @@ function getShopsByCity() {
           { withCredentials: true }
         );
         dispatch(setShopsOfCity(res.data));
-      } catch (err) {
+      } catch {
         // API error (silently fail)
       }
     };
     fetch();
   }, [city, userData]);
   return null;
-
-
 }
 
-export default getShopsByCity;
+export default useGetShopsByCity;

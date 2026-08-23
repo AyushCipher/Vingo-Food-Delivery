@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MdKeyboardBackspace } from "react-icons/md";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { useDispatch, useSelector } from "react-redux";
 import { setShop } from "../redux/userSlice";
 import { toast } from "react-toastify";

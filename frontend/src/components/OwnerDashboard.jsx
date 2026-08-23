@@ -8,12 +8,12 @@ import Footer from "./Footer";
 import OwnerFoodCard from "./OwnerFoodCard";
 import { setPendingOrdersCount, setOwnerPendingOrders } from "../redux/userSlice";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { toast } from "react-toastify";
 
 
 function OwnerDashboard() {
-  const { shop, ownerPendingOrders, socket, pendingOrdersCount } = useSelector((state) => state.user);
+  const { shop, ownerPendingOrders, socket } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -26,7 +26,7 @@ function OwnerDashboard() {
   }, [ownerPendingOrders]);
 
   useEffect(() => {
-    const refetchShopOrders = async (toastMsg, toastType = "info") => {
+    const refetchShopOrders = async () => {
       try {
         const res = await axios.get(`${serverUrl}/api/order/shop-orders`, { withCredentials: true });
         if (res.data.success) {
@@ -56,27 +56,12 @@ function OwnerDashboard() {
     };
   }, [socket, dispatch]);
 
-  const handleToggleAvailability = async (itemId, newAvailability) => {
-    try {
-      await axios.post(`${serverUrl}/api/item/edititem/${itemId}`, { availability: newAvailability }, { withCredentials: true });
-      if (shop && shop.items) {
-        const updatedItems = shop.items.map(item =>
-          item._id === itemId ? { ...item, availability: newAvailability } : item
-        );
-        dispatch({ type: "user/setShop", payload: { ...shop, items: updatedItems } });
-      }
-      toast.success("Availability updated");
-    } catch (err) {
-      alert("Failed to update availability");
-    }
-  };
-
   const handleDeleteItem = async (itemId) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
     try {
-      await axios.delete(`${serverUrl}/api/item/deleteitem/${itemId}`, { withCredentials: true });
+      await axios.delete(`${serverUrl}/api/item/delete/${itemId}`, { withCredentials: true });
       window.location.reload();
-    } catch (err) {
+    } catch {
       alert("Failed to delete item");
     }
   };

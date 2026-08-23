@@ -1,10 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useRef } from "react";
-import { serverUrl } from "../App";
-import { useDispatch, useSelector } from "react-redux";
-import { setShopsOfCity, setUserData } from "../redux/userSlice";
+import { serverUrl } from "../config";
+import { useSelector } from "react-redux";
 
-function updateLocation() {
+function useUpdateLocation() {
   const { userData, socket } = useSelector((state) => state.user);
   const watchIdRef = useRef(null);
 
@@ -27,7 +26,7 @@ function updateLocation() {
           latitude: lat,
           longitude: lng,
         });
-      } catch (error) {
+      } catch {
         // Silently ignore location update errors
       }
     }
@@ -36,7 +35,7 @@ function updateLocation() {
       (pos) => {
         updateMyLocation(pos.coords.latitude, pos.coords.longitude);
       },
-      (err) => {
+      () => {
         // Silently ignore geolocation errors
       },
       { enableHighAccuracy: false }
@@ -52,4 +51,4 @@ function updateLocation() {
   }, [userData]);
 }
 
-export default updateLocation;
+export default useUpdateLocation;

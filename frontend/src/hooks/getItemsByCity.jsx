@@ -1,10 +1,10 @@
 import axios from 'axios'
 import React, { useEffect } from 'react'
-import { serverUrl } from '../App'
+import { serverUrl } from '../config'
 import { useDispatch, useSelector } from 'react-redux'
-import {  setItemsOfCity, setShopsOfCity, setUserData } from '../redux/userSlice'
+import { setItemsOfCity } from '../redux/userSlice'
 
-function getItemsByCity() {
+function useGetItemsByCity() {
     const dispatch = useDispatch()
     const {city,userData} = useSelector(state => state.user) 
 
@@ -19,5 +19,5 @@ function getItemsByCity() {
     }, [city, userData])
 }
 
-export default getItemsByCity
+export default useGetItemsByCity
 

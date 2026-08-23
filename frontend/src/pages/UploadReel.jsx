@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
-import { serverUrl } from '../App'
+import { serverUrl } from '../config'
 import { toast } from 'react-toastify'
 import { MdKeyboardBackspace, MdVideoLibrary } from "react-icons/md"
 import { FaUpload } from "react-icons/fa"
@@ -79,7 +79,7 @@ function UploadReel() {
         }
 
         try {
-            const response = await axios.post(`${serverUrl}/api/reel/upload`, formData, {
+            await axios.post(`${serverUrl}/api/reel/upload`, formData, {
                 withCredentials: true,
                 headers: {
                     'Content-Type': 'multipart/form-data'
