@@ -1,6 +1,7 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
 import Item from "../models/item.model.js";
 import Shop from "../models/shop.model.js";
+import { parsePagination, applyPagination } from "../utils/pagination.js";
 
 
 export const addItem = async (req, res) => {
@@ -77,7 +78,8 @@ export const addItem = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ message: `Add Item error: ${error}` });
+    console.error("Add Item error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -93,7 +95,8 @@ export const getItemsByShop = async (req, res) => {
 
     return res.status(200).json(items);
   } catch (error) {
-    return res.status(500).json({ message: `Get item error: ${error}` });
+    console.error("Get item error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -118,10 +121,14 @@ export const getItemsByCity = async (req, res) => {
     const shopIds = shopsInCity.map((shop) => shop._id);
 
     // Find items for these shops
-    const items = await Item.find({
-      shop: { $in: shopIds },
-      availability: true,
-    });
+    const pagination = parsePagination(req.query);
+    const items = await applyPagination(
+      Item.find({
+        shop: { $in: shopIds },
+        availability: true,
+      }),
+      pagination
+    );
 
     return res.status(200).json(items);
   } catch (error) {
@@ -141,7 +148,8 @@ export const getItemById = async (req, res) => {
 
     return res.status(200).json(item);
   } catch (error) {
-    return res.status(500).json({ message: `Get item error: ${error}` });
+    console.error("Get item error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -226,7 +234,8 @@ export const editItem = async (req, res) => {
 
     return res.status(200).json(item);
   } catch (error) {
-    return res.status(500).json({ message: `Edit item error: ${error}` });
+    console.error("Edit item error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -257,6 +266,7 @@ export const deleteItem = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ message: `Delete item error: ${error}` });
+    console.error("Delete item error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

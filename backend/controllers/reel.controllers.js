@@ -3,6 +3,7 @@ import Reel from "../models/reel.model.js";
 import Shop from "../models/shop.model.js";
 import User from "../models/user.model.js";
 import Item from "../models/item.model.js";
+import { parsePagination, applyPagination } from "../utils/pagination.js";
 
 export const uploadReel = async (req, res) => {
     try {
@@ -70,10 +71,7 @@ export const uploadReel = async (req, res) => {
         return res.status(201).json(populatedReel);
     } catch (error) {
         console.error('Upload reel error:', error);
-        return res.status(500).json({ 
-            message: error.message || "Failed to upload reel",
-            error: error.toString()
-        });
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -119,7 +117,8 @@ export const likeReel = async (req, res) => {
 
         return res.status(200).json(reel);
     } catch (error) {
-        return res.status(500).json({ message: `Like reel error ${error}` });
+        console.error("Like reel error", error);
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -171,7 +170,7 @@ export const commentReel = async (req, res) => {
         return res.status(200).json(reel);
     } catch (error) {
         console.error('Comment reel error:', error);
-        return res.status(500).json({ message: `Comment reel error: ${error}` });
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -238,7 +237,7 @@ export const replyToComment = async (req, res) => {
         return res.status(200).json(populatedReel);
     } catch (error) {
         console.error('Reply to comment error:', error);
-        return res.status(500).json({ message: `Reply to comment error: ${error.message}` });
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -259,52 +258,58 @@ export const getAllReels = async (req, res) => {
             console.log('Found shops in city:', shopsInCity.length, shopsInCity.map(s => ({ name: s.name, city: s.city })));
             
             const shopIds = shopsInCity.map(shop => shop._id);
-            
+
             // Then find reels from those shops
-            reels = await Reel.find({ shop: { $in: shopIds } })
-                .populate("owner", "fullName email profileImage")
-                .populate({
-                    path: "shop",
-                    select: "name image city owner",
-                    populate: { path: "owner", select: "_id" }
-                })
-                .populate("item", "name price image")
-                .populate({
-                    path: "comments.author",
-                    select: "fullName profileImage"
-                })
-                .populate({
-                    path: "comments.replies.author",
-                    select: "fullName profileImage"
-                })
-                .sort({ createdAt: -1 });
-                
+            reels = await applyPagination(
+                Reel.find({ shop: { $in: shopIds } })
+                    .populate("owner", "fullName email profileImage")
+                    .populate({
+                        path: "shop",
+                        select: "name image city owner",
+                        populate: { path: "owner", select: "_id" }
+                    })
+                    .populate("item", "name price image")
+                    .populate({
+                        path: "comments.author",
+                        select: "fullName profileImage"
+                    })
+                    .populate({
+                        path: "comments.replies.author",
+                        select: "fullName profileImage"
+                    })
+                    .sort({ createdAt: -1 }),
+                parsePagination(req.query)
+            );
+
             console.log('Found reels:', reels.length);
         } else {
             // If no city provided, return all reels
-            reels = await Reel.find({})
-                .populate("owner", "fullName email profileImage")
-                .populate({
-                    path: "shop",
-                    select: "name image city owner",
-                    populate: { path: "owner", select: "_id" }
-                })
-                .populate("item", "name price image")
-                .populate({
-                    path: "comments.author",
-                    select: "fullName profileImage"
-                })
-                .populate({
-                    path: "comments.replies.author",
-                    select: "fullName profileImage"
-                })
-                .sort({ createdAt: -1 });
+            reels = await applyPagination(
+                Reel.find({})
+                    .populate("owner", "fullName email profileImage")
+                    .populate({
+                        path: "shop",
+                        select: "name image city owner",
+                        populate: { path: "owner", select: "_id" }
+                    })
+                    .populate("item", "name price image")
+                    .populate({
+                        path: "comments.author",
+                        select: "fullName profileImage"
+                    })
+                    .populate({
+                        path: "comments.replies.author",
+                        select: "fullName profileImage"
+                    })
+                    .sort({ createdAt: -1 }),
+                parsePagination(req.query)
+            );
         }
         
         return res.status(200).json(reels);
     } catch (error) {
         console.error('getAllReels error:', error);
-        return res.status(500).json({ message: `Get all reels error: ${error}` });
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -330,7 +335,8 @@ export const getShopReels = async (req, res) => {
             .sort({ createdAt: -1 });
         return res.status(200).json(reels);
     } catch (error) {
-        return res.status(500).json({ message: `Get shop reels error: ${error}` });
+        console.error("Get shop reels error", error);
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -389,7 +395,7 @@ export const editReel = async (req, res) => {
         return res.status(200).json(updatedReel);
     } catch (error) {
         console.error('Edit reel error:', error);
-        return res.status(500).json({ message: `Edit reel error: ${error}` });
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -410,7 +416,8 @@ export const deleteReel = async (req, res) => {
         await Reel.findByIdAndDelete(reelId);
         return res.status(200).json({ message: "Reel deleted successfully" });
     } catch (error) {
-        return res.status(500).json({ message: `Delete reel error: ${error}` });
+        console.error("Delete reel error", error);
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -435,7 +442,8 @@ export const saveReel = async (req, res) => {
         await user.populate("savedReels");
         return res.status(200).json(user);
     } catch (error) {
-        return res.status(500).json({ message: `Save reel error: ${error}` });
+        console.error("Save reel error", error);
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };
 
@@ -463,6 +471,7 @@ export const getSavedReels = async (req, res) => {
 
         return res.status(200).json(user.savedReels);
     } catch (error) {
-        return res.status(500).json({ message: `Get saved reels error: ${error}` });
+        console.error("Get saved reels error", error);
+        return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
     }
 };

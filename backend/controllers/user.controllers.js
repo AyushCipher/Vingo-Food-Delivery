@@ -16,7 +16,7 @@ export const getCurrentUser = async (req,res)=>{
     return res.status(200).json(user);
   } catch (error) {
     console.error("getCurrentUser error:", error);
-    return res.status(500).json({message: `Get current user error: ${error}`})
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." })
   }
 }
 
@@ -63,7 +63,7 @@ export const updateUserLocation = async (req, res) => {
     console.error("Update location error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: "Something went wrong. Please try again."
     });
   }
 };
@@ -107,6 +107,6 @@ export const searchItems = async (req, res) => {
     return res.status(200).json(items);
   } catch (error) {
     console.error("Search error:", error);
-    return res.status(500).json({ message: `Search error: ${error.message}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

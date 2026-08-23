@@ -36,7 +36,7 @@ orderRouter.post("/update-order-status/:orderId/:shopId", isAuth, updateOwnerOrd
 
 // Delivery boy
 orderRouter.get("/getassignments", isAuth, getDeliveryBoyAssignments);
-orderRouter.get("/accept-assignment/:assignmentId", isAuth, acceptAssignment);
+orderRouter.post("/accept-assignment/:assignmentId", isAuth, acceptAssignment);
 orderRouter.get("/current-order", isAuth, getCurrentOrder);
 orderRouter.post("/update-location", isAuth, updateDeliveryBoyLocation);
 orderRouter.get("/delivery-location/:orderId/:shopOrderId", isAuth, getDeliveryBoyLocation);

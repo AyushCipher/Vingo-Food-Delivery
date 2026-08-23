@@ -64,7 +64,7 @@ export const addReview = async (req, res) => {
     });
   } catch (error) {
     console.error("Add review error:", error);
-    return res.status(500).json({ message: `Add review error: ${error}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -113,7 +113,7 @@ export const getItemReviews = async (req, res) => {
     });
   } catch (error) {
     console.error("Get reviews error:", error);
-    return res.status(500).json({ message: `Get reviews error: ${error}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -146,7 +146,7 @@ export const canUserReview = async (req, res) => {
     });
   } catch (error) {
     console.error("Can review check error:", error);
-    return res.status(500).json({ message: `Error checking review status: ${error}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -194,7 +194,7 @@ export const updateReview = async (req, res) => {
     });
   } catch (error) {
     console.error("Update review error:", error);
-    return res.status(500).json({ message: `Update review error: ${error}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -240,6 +240,6 @@ export const deleteReview = async (req, res) => {
     return res.status(200).json({ message: "Review deleted successfully" });
   } catch (error) {
     console.error("Delete review error:", error);
-    return res.status(500).json({ message: `Delete review error: ${error}` });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

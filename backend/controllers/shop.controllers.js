@@ -1,18 +1,21 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
 import Shop from "../models/shop.model.js";
+import { parsePagination, applyPagination } from "../utils/pagination.js";
 
 
 export const getAllShops = async (req, res) => {
   try {
-    const shops = await Shop.find({}).populate("owner");
-    
+    const pagination = parsePagination(req.query);
+    const shops = await applyPagination(Shop.find({}).populate("owner"), pagination);
+
     if (shops.length > 0) {
       return res.status(200).json(shops);
     }
 
     return;
   } catch (error) {
-    return res.status(500).json({ message: `Get all shops error: ${error}` });
+    console.error("Get all shops error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -67,7 +70,8 @@ export const addShop = async (req, res) => {
     return res.status(200).json(shop);
 
   } catch (error) {
-    return res.status(500).json({ message: `Add shop error: ${error}` });
+    console.error("Add shop error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -88,7 +92,8 @@ export const getCurrentShop = async (req, res) => {
 
     return null;
   } catch (error) {
-    return res.status(500).json({ message: `Get current shop error: ${error}` });
+    console.error("Get current shop error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -102,13 +107,18 @@ export const getShopsByCity = async (req, res) => {
     }
 
     // Case-insensitive search
-    const shops = await Shop.find({
-      city: { $regex: new RegExp(`^${city}$`, "i") },
-    }).populate("items");
+    const pagination = parsePagination(req.query);
+    const shops = await applyPagination(
+      Shop.find({
+        city: { $regex: new RegExp(`^${city}$`, "i") },
+      }).populate("items"),
+      pagination
+    );
 
     return res.status(200).json(shops);
   } catch (error) {
-    return res.status(500).json({ message: `Get shop by city error: ${error}` });
+    console.error("Get shop by city error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -124,6 +134,7 @@ export const getShopById = async (req, res) => {
     
     return res.status(200).json(shop);
   } catch (error) {
-    return res.status(500).json({ message: `Get shop by id error: ${error}` });
+    console.error("Get shop by id error", error);
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };

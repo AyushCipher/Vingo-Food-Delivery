@@ -1,8 +1,13 @@
 import express from "express"
 import dotenv from "dotenv"
+dotenv.config()
+
 import connectDb from "./config/db.js"
 import cookieParser from "cookie-parser"
 import cors from "cors"
+import helmet from "helmet"
+import rateLimit from "express-rate-limit"
+import pinoHttp from "pino-http"
 import authRouter from "./routes/auth.routes.js"
 import userRouter from "./routes/user.routes.js"
 import shopRouter from "./routes/shop.routes.js"
@@ -14,10 +19,11 @@ import chatRouter from "./routes/chat.routes.js"
 import http from "http"
 import { Server } from "socket.io"
 import socketHandler from "./socket.js"
+import validateEnv from "./config/validateEnv.js"
+import logger from "./config/logger.js"
+import errorHandler, { notFoundHandler } from "./middlewares/errorHandler.js"
 
-import { sendMail } from "./config/mail.js";
-
-dotenv.config()
+validateEnv()
 
 const port = process.env.PORT || 5000
 const app = express()
@@ -50,22 +56,53 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(helmet())
+app.use(pinoHttp({ logger }))
 
 app.use(express.json())
 app.use(cookieParser())
-app.use("/api/auth", authRouter)
+
+// General abuse guard on all API routes, with a stricter limit on the two
+// endpoints most exposed to cost/abuse: auth (credential stuffing, OTP spam)
+// and chat (each miss burns a Gemini API call).
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many attempts, please try again later" },
+})
+const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many messages, please slow down" },
+})
+
+app.use("/api", apiLimiter)
+app.use("/api/auth", authLimiter, authRouter)
 app.use("/api/user", userRouter)
 app.use("/api/shop", shopRouter)
 app.use("/api/item", itemRouter)
 app.use("/api/order", orderRouter)
 app.use("/api/review", reviewRouter)
 app.use("/api/reel", reelRouter)
-app.use("/api/chat", chatRouter)
+app.use("/api/chat", chatLimiter, chatRouter)
+
+app.use(notFoundHandler)
+app.use(errorHandler)
 
 socketHandler(io)
 
 server.listen(port,()=>{
-  console.log(`Server started at port no. ${port}`)
+  logger.info(`Server started at port no. ${port}`)
   connectDb()
 })
 
