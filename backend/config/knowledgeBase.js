@@ -101,7 +101,10 @@ You see the exact fee before confirming your order. All prices are transparent, 
 Your satisfaction matters - let's fix this!`,
   },
   itemUnavailable: {
-    keywords: ['item not available', 'out of stock', 'not available', 'sold out', 'unavailable', 'out of stock'],
+    // 'unavailable' deliberately excluded as a bare keyword: it's a
+    // substring of "available", so a normal "what's available" question
+    // was fuzzy-matching this category via the word-based fallback.
+    keywords: ['item not available', 'out of stock', 'not available', 'sold out'],
     response: `Items may be unavailable due to:
 - Stock running out (popular items)
 - Shop temporarily closed
@@ -208,13 +211,20 @@ export const findRuleBasedResponse = (userMessage) => {
       }
     }
 
-    // Strategy 2: Word-based matching (for better flexibility)
+    // Strategy 2: Word-based matching (for better flexibility, e.g. "track"
+    // vs "tracking"). Substring containment is only applied to words of 4+
+    // characters — otherwise short filler words like "i" or "my" trivially
+    // match almost any keyword ("track".includes("i") is true), which was
+    // causing ordinary sentences to spuriously match unrelated categories.
     if (matchScore === 0) {
       for (const keyword of keywords) {
         const keywordWords = keyword.toLowerCase().split(/\s+/);
-        // Check if all words of keyword are present in message
         const allWordsPresent = keywordWords.every((kw) =>
-          messageWords.some((w) => w.includes(kw) || kw.includes(w))
+          messageWords.some((w) => {
+            if (w === kw) return true;
+            if (w.length < 4 || kw.length < 4) return false;
+            return w.includes(kw) || kw.includes(w);
+          })
         );
         if (allWordsPresent) {
           matchScore += 1;

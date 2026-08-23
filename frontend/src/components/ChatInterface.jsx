@@ -3,7 +3,7 @@ import './ChatInterface.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const ChatInterface = ({ sessionId, userId, userRole, onClose }) => {
+const ChatInterface = ({ sessionId, userRole, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +26,7 @@ const ChatInterface = ({ sessionId, userId, userRole, onClose }) => {
         const response = await fetch(
           `${API_URL}/api/chat/history/${sessionId}`,
           {
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
             },
@@ -71,12 +72,12 @@ const ChatInterface = ({ sessionId, userId, userRole, onClose }) => {
         `${API_URL}/api/chat/message`,
         {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             sessionId,
-            userId: userId || null,
             userMessage,
             userRole: userRole === 'user' ? 'customer' : (userRole || 'customer'),
             currentPage: window.location.pathname,
@@ -126,7 +127,7 @@ const ChatInterface = ({ sessionId, userId, userRole, onClose }) => {
       {/* Header */}
       <div className="chat-header">
         <h3>Vingo Support</h3>
-        <button className="close-btn" onClick={onClose}>
+        <button className="close-btn" onClick={onClose} aria-label="Close chat">
           ✕
         </button>
       </div>

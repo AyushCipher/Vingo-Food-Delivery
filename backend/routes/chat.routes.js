@@ -1,4 +1,6 @@
 import express from 'express';
+import isAuth from '../middlewares/isAuth.js';
+import optionalAuth from '../middlewares/optionalAuth.js';
 import {
   getChatHistory,
   sendMessage,
@@ -8,12 +10,13 @@ import {
 
 const router = express.Router();
 
-// Public routes (no auth required for initial chat)
-router.post('/message', sendMessage); // Send message and get bot response
-router.get('/history/:sessionId', getChatHistory); // Get chat history
-router.delete('/history/:sessionId', clearChatHistory); // Clear chat history
+// Public routes (chat must stay usable by anonymous visitors), but req.userId
+// is set from the auth cookie when present so ownership can be enforced below
+router.post('/message', optionalAuth, sendMessage); // Send message and get bot response
+router.get('/history/:sessionId', optionalAuth, getChatHistory); // Get chat history
+router.delete('/history/:sessionId', optionalAuth, clearChatHistory); // Clear chat history
 
-// Protected routes (optional - for logged-in users)
-router.get('/sessions', getUserChatSessions); // Get user's previous sessions
+// Requires login: this endpoint only makes sense for a specific user's sessions
+router.get('/sessions', isAuth, getUserChatSessions); // Get user's previous sessions
 
 export default router;

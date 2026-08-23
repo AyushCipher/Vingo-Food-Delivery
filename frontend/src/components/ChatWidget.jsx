@@ -14,8 +14,10 @@ const ChatWidget = ({ userId, userRole }) => {
     if (existingSessionId) {
       setSessionId(existingSessionId);
     } else {
-      // Generate new session ID
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Generate new session ID using a cryptographically random UUID so it
+      // can't be guessed/brute-forced (sessionId doubles as the access token
+      // for anonymous chat history on the backend)
+      const newSessionId = `session_${crypto.randomUUID()}`;
       localStorage.setItem('chatSessionId', newSessionId);
       setSessionId(newSessionId);
     }
@@ -36,6 +38,8 @@ const ChatWidget = ({ userId, userRole }) => {
           className="chat-bubble"
           onClick={toggleChat}
           title="Chat with Vingo Support"
+          aria-label={isOpen ? "Close chat support" : "Open chat support"}
+          aria-expanded={isOpen}
         >
           <span className="chat-icon">💬</span>
           {unreadCount > 0 && (
