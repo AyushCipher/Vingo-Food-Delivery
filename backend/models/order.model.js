@@ -95,6 +95,7 @@ const orderSchema = new mongoose.Schema({
     required: true 
   },
   totalAmount: Number,
+  deliveryFee: { type: Number, default: 0 },
   shopOrders: [shopOrderSchema],
 
   // Payment-related fields

@@ -75,8 +75,11 @@ export const placeOrder = async (req, res) => {
     );
 
     // Total + Delivery Fee
-    let totalAmount = shopOrders.reduce((sum, so) => sum + so.subtotal, 0);
-   
+    // Threshold must match CartPage/CheckoutPage's free-delivery cutoff (1000),
+    // otherwise what the customer is shown and what they're charged diverge.
+    const subtotal = shopOrders.reduce((sum, so) => sum + so.subtotal, 0);
+    const deliveryFee = subtotal < 1000 ? 40 : 0;
+    let totalAmount = subtotal + deliveryFee;
 
     console.log(" Total Amount to charge:", totalAmount);
 
@@ -93,6 +96,7 @@ export const placeOrder = async (req, res) => {
         address,
         paymentMethod,
         totalAmount,
+        deliveryFee,
         shopOrders,
         razorpayOrderId: razorOrder.id,
         payment: false,
@@ -112,6 +116,7 @@ export const placeOrder = async (req, res) => {
       address,
       paymentMethod,
       totalAmount,
+      deliveryFee,
       shopOrders,
       payment: false,
     });
