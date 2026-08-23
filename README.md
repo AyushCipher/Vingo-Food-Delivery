@@ -7,13 +7,13 @@
 [![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-010101?logo=socketdotio&logoColor=white)](https://socket.io/)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
-> A full-stack, role-aware food delivery platform with real-time order tracking, short-form food reels, shop management, and a hybrid AI support chatbot.
+> A full-stack, role-aware food delivery platform with real-time order tracking, short-form food reels, shop management, and a DB-grounded AI assistant.
 
 ## Overview
 
 Vingo is a production-style food delivery and social commerce platform built for three distinct roles: customers, restaurant owners, and delivery partners. It combines restaurant discovery, cart and checkout flows, delivery tracking, review management, and reel-based content discovery into one app.
 
-The standout feature is the in-app support assistant. It uses a rule-based knowledge base for common questions and falls back to Gemini when the query is not covered by predefined logic. That gives the project both deterministic support for common workflows and a more conversational experience for edge cases.
+The standout feature is the in-app assistant. A rule-based knowledge base handles common, predictable questions deterministically; anything else goes to a Gemini-powered agent with function-calling access to real MongoDB data — it can compare prices across shops, search the menu by budget/diet, and check the signed-in user's own order status/history, grounding its answers in live data instead of guessing.
 
 ## Key Features
 
@@ -29,9 +29,10 @@ The standout feature is the in-app support assistant. It uses a rule-based knowl
 - Food reels with upload, like, comment, reply, save, and edit flows
 - Reviews for menu items
 - Password reset with email OTP
-- Hybrid chatbot for order, payment, refund, support, and FAQ queries
+- Hybrid chatbot: rule-based FAQ layer plus a tool-calling Gemini agent that queries the database directly for price comparisons, menu search, and the user's own order status/history
 - Media uploads through Cloudinary
 - MongoDB-backed persistence for users, shops, orders, reels, and chat sessions
+- Installable as a PWA (offline app shell, home-screen install)
 
 ## Project Architecture
 
@@ -59,6 +60,7 @@ sequenceDiagram
   participant API as Express API
   participant DB as MongoDB
   participant RT as Socket.io
+  participant G as Gemini
 
   User->>UI: Search food / browse shops / add to cart
   UI->>API: Fetch shops, items, reels, user profile
@@ -73,25 +75,39 @@ sequenceDiagram
   User->>UI: Ask chatbot a question
   UI->>API: Send message with session context
   API->>DB: Store conversation history
-  API-->>UI: Rule-based or Gemini response
+  alt No rule match
+    API->>G: Send message + tool declarations
+    G-->>API: Requests a tool call (e.g. compareItemPrices)
+    API->>DB: Run the tool's query, scoped to the caller
+    DB-->>API: Real shop/item/order data
+    API->>G: Send tool result back
+    G-->>API: Final grounded answer
+  end
+  API-->>UI: Rule-based or agent response
 ```
 ## Tech Stack
 
 | Layer | Technologies |
 |---|---|
 | Frontend | React 19, Vite, React Router, Redux Toolkit, Tailwind CSS 4, Axios, React Toastify, React Icons, Recharts, Leaflet |
-| Backend | Node.js, Express 5, Mongoose, Socket.io, Multer, CORS, Cookie Parser |
+| Backend | Node.js, Express 5, Mongoose, Socket.io, Multer, CORS, Cookie Parser, Helmet, express-rate-limit, Zod, Pino |
 | Database | MongoDB |
-| Auth | JWT, HTTP-only cookies, Firebase Google auth setup |
+| Auth | JWT, HTTP-only cookies, Firebase Admin SDK (server-verified Google Sign-In) |
 | Payments | Razorpay |
 | Media Storage | Cloudinary |
 | Email | Nodemailer SMTP |
-| AI / Chat | Google Gemini API fallback plus rule-based knowledge base |
+| AI / Chat | Gemini function-calling agent with DB-backed tools, plus a rule-based knowledge base |
+| Testing / CI | Vitest, Supertest, ESLint, GitHub Actions |
 
 ## AI / LLM Technologies Used
 
-- Gemini 1.5 Flash fallback for support responses
-- Rule-based FAQ layer for deterministic answers to common delivery, payment, refund, login, and app-help questions
+- Gemini (flash-tier, tracked via the `-latest` alias) with **function calling** — the model can call real backend tools instead of only generating free text
+- DB-grounded tools (`backend/services/chatTools.js`), each backed by a live Mongoose query:
+  - `compareItemPrices` — price-compare a dish across shops in a city
+  - `searchMenuItems` — search the menu by name/category/budget/diet
+  - `getShopsInCity` — list restaurants in a city
+  - `getOrderStatus` / `getOrderHistory` — the signed-in user's own orders only, scoped server-side to the verified session (never a model- or client-supplied ID)
+- Rule-based FAQ layer for deterministic answers to common delivery, payment, refund, login, and app-help questions, tried before the agent
 - Session-based conversation history stored in MongoDB
 - Context awareness from user role and current page
 - Support session cleanup through TTL index for privacy-focused retention
@@ -145,6 +161,12 @@ Create a `.env` file in `backend/` with the required variables listed below, the
 npm run dev
 ```
 
+Run the backend test suite (Vitest — auth, payment verification, chat ownership/auth-scoping, and the chat agent's tools):
+
+```bash
+npm test
+```
+
 ### Frontend Setup
 
 ```bash
@@ -172,6 +194,7 @@ npm run dev
 | `RAZORPAY_KEY_ID` | Razorpay public key |
 | `RAZORPAY_KEY_SECRET` | Razorpay secret key |
 | `GEMINI_API_KEY` | Gemini API key for chatbot fallback |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | Full JSON of a Firebase service account key, used to verify Google Sign-In ID tokens server-side (Firebase Console → Project Settings → Service Accounts → Generate new private key) |
 
 ### Frontend
 
@@ -217,19 +240,19 @@ npm run dev
 
 ### Shops
 
-- `GET /api/shop/getall`
+- `GET /api/shop/getall` — supports optional `?limit=&skip=`
 - `GET /api/shop/getcurrent`
 - `POST /api/shop/editshop`
-- `GET /api/shop/getshopsbycity/:city`
+- `GET /api/shop/getshopsbycity/:city` — supports optional `?limit=&skip=`
 - `GET /api/shop/getshopbyid/:shopId`
 
 ### Items
 
 - `GET /api/item/getitemsbyshop/:shopId`
-- `GET /api/item/getitemsbycity/:city`
+- `GET /api/item/getitemsbycity/:city` — supports optional `?limit=&skip=`
 - `POST /api/item/additem`
 - `POST /api/item/edititem/:itemId`
-- `GET /api/item/delete/:itemId`
+- `DELETE /api/item/delete/:itemId`
 - `GET /api/item/getbyid/:itemId`
 
 ### Orders
@@ -240,7 +263,7 @@ npm run dev
 - `GET /api/order/shop-orders`
 - `POST /api/order/update-order-status/:orderId/:shopId`
 - `GET /api/order/getassignments`
-- `GET /api/order/accept-assignment/:assignmentId`
+- `POST /api/order/accept-assignment/:assignmentId`
 - `GET /api/order/current-order`
 - `POST /api/order/update-location`
 - `GET /api/order/delivery-location/:orderId/:shopOrderId`
@@ -266,14 +289,14 @@ npm run dev
 ### Reels
 
 - `POST /api/reel/upload`
-- `GET /api/reel/getAll`
+- `GET /api/reel/getAll` — supports optional `?limit=&skip=`
 - `GET /api/reel/shop/:shopId`
-- `GET /api/reel/like/:reelId`
+- `POST /api/reel/like/:reelId`
 - `POST /api/reel/comment/:reelId`
 - `POST /api/reel/reply/:reelId/:commentId`
 - `PUT /api/reel/edit/:reelId`
 - `DELETE /api/reel/delete/:reelId`
-- `GET /api/reel/save/:reelId`
+- `POST /api/reel/save/:reelId`
 - `GET /api/reel/saved`
 
 ### Chat
@@ -328,9 +351,10 @@ _Screenshot of the chatbot UI._
 ## Future Improvements
 
 - Add in-app push notifications for order status changes
-- Replace the current support bot with retrieval over a richer FAQ and order context
-- Add automated tests for checkout, reel uploads, and chatbot responses
+- Replace the keyword-matched FAQ layer with embedding-based retrieval (e.g. MongoDB Atlas Vector Search) so more phrasings match without hand-maintained keyword lists
+- Expand automated test coverage to checkout/payment UI flows and reel upload (auth, payment verification, chat ownership, and the chat agent's tools are covered; broader route-level integration tests are not yet)
 - Introduce analytics dashboards for conversion, retention, and delivery SLA metrics
 - Add admin moderation tools for reported reels and reviews
-- Harden rate limiting, audit logging, and input validation across public endpoints
+- Extend Zod input validation and stricter rate limits to the remaining public endpoints beyond auth and chat
+- Full TypeScript migration (deliberately out of scope for the current pass — high blast radius across the whole codebase, better done as its own dedicated effort)
 
