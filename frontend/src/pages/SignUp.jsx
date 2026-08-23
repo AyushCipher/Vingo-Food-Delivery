@@ -3,7 +3,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../../utils/firebase";
 import { useDispatch } from "react-redux";
@@ -21,7 +21,6 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false); 
 
   const primaryColor = "#ff4d2d";
-  const hoverColor = "#e64323";
   const bgColor = "#fff9f6";
   const borderColor = "#ddd";
 
@@ -80,11 +79,12 @@ export default function SignUp() {
       const result = await signInWithPopup(auth, provider);
 
       if (result) {
+        const idToken = await result.user.getIdToken();
         const { data } = await axios.post(`${serverUrl}/api/auth/googleauth`,
           {
+            idToken,
             fullName: result.user.displayName,
-            email: result.user.email,
-            mobile: mobileNumber, 
+            mobile: mobileNumber,
             role,
           },
           { withCredentials: true }

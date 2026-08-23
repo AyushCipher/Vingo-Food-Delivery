@@ -37,15 +37,19 @@ const userSchema = new mongoose.Schema({
     ref: "Order"
   }],
 
+  // No defaults here on purpose: a new user has no location yet (it's set
+  // later via /api/user/update-location). Defaulting `type` to "Point"
+  // while `coordinates` stays unset creates a partial GeoJSON object that
+  // the 2dsphere index below can't extract keys from, which fails the
+  // insert outright. Leaving both undefined keeps the field absent until a
+  // real coordinate pair is set, which the index handles as unindexed.
   location: {
-    type: { 
-      type: String, 
-      enum: ["Point"], 
-      default: "Point" 
+    type: {
+      type: String,
+      enum: ["Point"]
     },
     coordinates: {
-      type: [Number],
-      default: undefined
+      type: [Number]
     }
   },
 

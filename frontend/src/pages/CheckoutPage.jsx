@@ -13,12 +13,12 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useNavigate } from "react-router-dom";
-import { serverUrl } from "../App";
+import { serverUrl } from "../config";
 import useCurrentLocation from "../hooks/useCurrentLocation";
 import { clearCart } from "../redux/userSlice";
 import ClipLoader from "react-spinners/ClipLoader";
 
-const GEOAPIFY_API_KEY = "import.meta.env.VITE_GEOAPIKEY";
+const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIKEY;
 
 // Fix Leaflet default icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -225,6 +225,7 @@ export default function CheckoutPage() {
             <button
               onClick={() => forwardGeocode(searchText)}
               className="bg-[#ff4d2d] hover:bg-[#e64526] text-white px-3 py-2 rounded-lg flex items-center justify-center"
+              aria-label="Search address"
             >
               <FaSearch />
             </button>
@@ -232,6 +233,7 @@ export default function CheckoutPage() {
               onClick={getCurrentLocation}
               className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center justify-center"
               title="Use my current location"
+              aria-label="Use my current location"
             >
               <FaCrosshairs />
             </button>

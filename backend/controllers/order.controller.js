@@ -7,10 +7,20 @@ import Shop from "../models/shop.model.js";
 import User from "../models/user.model.js";
 import Razorpay from "razorpay"
 
-let instance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Built lazily (not at module load): this file is imported before index.js's
+// dotenv.config() runs, so process.env.RAZORPAY_KEY_ID would be undefined at
+// module-load time, and the Razorpay SDK throws synchronously on a missing
+// key_id — that crashed the entire server on startup, not just this feature.
+let instance = null;
+const getRazorpayInstance = () => {
+  if (!instance) {
+    instance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return instance;
+};
 
 
 
@@ -72,7 +82,7 @@ export const placeOrder = async (req, res) => {
 
     // Online Payment (Razorpay)
     if (paymentMethod === "online") {
-      const razorOrder = await instance.orders.create({
+      const razorOrder = await getRazorpayInstance().orders.create({
         amount: Math.round(totalAmount * 100), // paise me (integer hona chahiye)
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
@@ -164,7 +174,7 @@ export const placeOrder = async (req, res) => {
     return res.status(201).json({ success: true, order: newOrder });
   } catch (error) {
     console.error("❌ Place order error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -173,14 +183,47 @@ export const verifyRazorpay = async (req, res) => {
   try {
     const { razorpay_payment_id, orderId } = req.body;
 
-    const payment = await instance.payments.fetch(razorpay_payment_id);
+    if (!razorpay_payment_id || !orderId) {
+      return res.status(400).json({ success: false, message: "razorpay_payment_id and orderId are required" });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    // Only the order's own owner can confirm its payment
+    if (order.user.toString() !== req.userId) {
+      return res.status(403).json({ success: false, message: "Not authorized for this order" });
+    }
+
+    if (order.paymentMethod !== "online") {
+      return res.status(400).json({ success: false, message: "Order is not an online payment order" });
+    }
+
+    // Already verified — avoid double-processing (double emails, duplicate socket events)
+    if (order.payment) {
+      return res.status(200).json({ success: true, message: "Payment already verified" });
+    }
+
+    const payment = await getRazorpayInstance().payments.fetch(razorpay_payment_id);
 
     if (!payment || payment.status !== "captured") {
       return res.status(400).json({ success: false, message: "Payment failed or not captured" });
     }
 
-    const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    // Tie the captured payment back to THIS order's own Razorpay order and amount,
+    // so a payment captured for one order can't be replayed to mark a different order as paid.
+    if (payment.order_id !== order.razorpayOrderId) {
+      return res.status(400).json({ success: false, message: "Payment does not match this order" });
+    }
+
+    if (payment.amount !== Math.round(order.totalAmount * 100)) {
+      return res.status(400).json({ success: false, message: "Payment amount mismatch" });
+    }
+
+    const existingWithPayment = await Order.findOne({ razorpayPaymentId: razorpay_payment_id });
+    if (existingWithPayment && existingWithPayment._id.toString() !== order._id.toString()) {
+      return res.status(400).json({ success: false, message: "Payment already used for another order" });
+    }
 
     order.payment = true;
     order.razorpayPaymentId = razorpay_payment_id;
@@ -250,7 +293,7 @@ export const verifyRazorpay = async (req, res) => {
     });
   } catch (error) {
     console.error("Verify Razorpay Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -266,7 +309,7 @@ export const getMyOrders = async (req, res) => {
   return  res.json({ success: true, orders });
   } catch (error) {
     console.error("Error fetching my orders:", error);
-   return res.status(500).json({ success: false, message: error.message });
+   return res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -318,7 +361,7 @@ export const getOwnerOrders = async (req, res) => {
     console.error("Get owner orders error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong. Please try again.",
     });
   }
 };
@@ -522,7 +565,7 @@ export const updateOwnerOrderStatus = async (req, res) => {
     console.error("Update order status error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong. Please try again.",
     });
   }
 };
@@ -566,7 +609,7 @@ export const getDeliveryBoyAssignments = async (req, res) => {
     console.error("Get delivery boy assignments error:", error);
     return res.status(500).json({ 
       success: false, 
-      message: error.message });
+      message: "Something went wrong. Please try again." });
   }
 };
 
@@ -743,7 +786,7 @@ export const getCurrentOrder = async (req, res) => {
     console.error("❌ Get current order error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong. Please try again.",
     });
   }
 };
@@ -792,7 +835,7 @@ export const updateDeliveryBoyLocation = async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Location update error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -838,7 +881,7 @@ export const getOrderById = async (req, res) => {
     res.json({ success: true, order });
   } catch (error) {
     console.error("Error fetching order:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
