@@ -52,7 +52,7 @@ const RouteFallback = () => (
 )
 
 function App() {
-  const { userData } = useSelector(state => state.user);
+  const { userData, authChecked } = useSelector(state => state.user);
 
   useGetCurrentUser();
   getCity();
@@ -69,6 +69,15 @@ function App() {
       getSocket(userData._id);
     }
   }, [userData?._id]);
+
+  // Wait for the initial /api/user/current check before evaluating any
+  // route guard. Without this, userData starts out null (indistinguishable
+  // from "logged out"), so a hard refresh or deep link into a protected
+  // route bounces a genuinely logged-in user to /signin and then, once the
+  // check resolves, cascades again to /.
+  if (!authChecked) {
+    return <RouteFallback />;
+  }
 
   return (
    <>

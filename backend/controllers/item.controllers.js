@@ -30,21 +30,6 @@ export const addItem = async (req, res) => {
       return res.status(400).json({ message: "Image is required" });
     }
 
-    // Parse ingredients and allergens from JSON string
-    let parsedIngredients = [];
-    let parsedAllergens = [];
-    
-    try {
-      if (ingredients) {
-        parsedIngredients = JSON.parse(ingredients);
-      }
-      if (allergens) {
-        parsedAllergens = JSON.parse(allergens);
-      }
-    } catch (e) {
-      console.log("Error parsing ingredients/allergens:", e);
-    }
-    
     const item = await Item.create({
       name,
       category,
@@ -53,11 +38,6 @@ export const addItem = async (req, res) => {
       price,
       shop: shop._id,
       description: description || "",
-      ingredients: parsedIngredients,
-      preparationTime: preparationTime || 15,
-      servingSize: servingSize || "1 serving",
-      spiceLevel: spiceLevel || "",
-      allergens: parsedAllergens,
       availability: availability !== "false"
     });
 
@@ -156,17 +136,12 @@ export const getItemById = async (req, res) => {
 
 export const editItem = async (req, res) => {
   try {
-    const { 
-      name, 
-      category, 
-      type, 
+    const {
+      name,
+      category,
+      type,
       price,
       description,
-      ingredients,
-      preparationTime,
-      servingSize,
-      spiceLevel,
-      allergens,
       availability
     } = req.body;
     const { itemId } = req.params;
@@ -176,32 +151,12 @@ export const editItem = async (req, res) => {
       image = await uploadOnCloudinary(req.file.path);
     }
 
-    // Parse ingredients and allergens from JSON string
-    let parsedIngredients = [];
-    let parsedAllergens = [];
-    
-    try {
-      if (ingredients) {
-        parsedIngredients = JSON.parse(ingredients);
-      }
-      if (allergens) {
-        parsedAllergens = JSON.parse(allergens);
-      }
-    } catch (e) {
-      console.log("Error parsing ingredients/allergens:", e);
-    }
-
     const updateData = {
       name,
       category,
       type,
       price,
       description: description || "",
-      ingredients: parsedIngredients,
-      preparationTime: preparationTime || 15,
-      servingSize: servingSize || "1 serving",
-      spiceLevel: spiceLevel || "",
-      allergens: parsedAllergens,
       ...(availability !== undefined && { availability: availability !== "false" })
     };
 

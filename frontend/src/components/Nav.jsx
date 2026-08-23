@@ -109,8 +109,8 @@ useEffect(() => {
     <>
       {/* NAVBAR */}
       <div
-        className="w-full h-[80px] fixed top-0 z-[9999]
-        flex items-center justify-between md:justify-center gap-6 px-5
+        className="fixed inset-x-0 top-0 h-[80px] z-[9999]
+        flex items-center justify-between gap-6 px-5
         bg-white/80 backdrop-blur-xl border-b border-white/30
         shadow-[0_6px_30px_rgba(0,0,0,0.05)]
       "

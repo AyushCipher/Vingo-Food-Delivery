@@ -19,6 +19,12 @@ const userSlice = createSlice({
   name: "user",
   initialState: {
     userData: null,
+    // Distinguishes "haven't checked yet" from "checked, not logged in" —
+    // route guards must wait for this before redirecting, otherwise a
+    // logged-in user hard-refreshing a protected route gets bounced to
+    // /signin (and then back to /) during the brief window before
+    // /api/user/current resolves.
+    authChecked: false,
     city: null,
     allShops: null,
     shop: null,
@@ -36,6 +42,10 @@ const userSlice = createSlice({
   reducers: {
     setUserData: (state, action) => {
       state.userData = action.payload;
+    },
+
+    setAuthChecked: (state, action) => {
+      state.authChecked = action.payload;
     },
 
     setCity: (state, action) => {
@@ -182,6 +192,7 @@ const userSlice = createSlice({
 
 export const {
   setUserData,
+  setAuthChecked,
   setCity,
   setAllShops,
   setShop,

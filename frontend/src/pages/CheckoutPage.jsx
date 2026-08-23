@@ -70,7 +70,10 @@ export default function CheckoutPage() {
     (sum, i) => sum + Number(i.price) * Number(i.quantity),
     0,
   );
-  const deliveryFee = subtotal > 500 ? 0 : 40;
+  // Must match CartPage's threshold — these used to disagree (500 vs 1000),
+  // so the delivery fee display flipped between the cart and checkout pages
+  // for the same order.
+  const deliveryFee = subtotal < 1000 ? 40 : 0;
   const total = subtotal + deliveryFee;
 
   // 🔥 Forward Geocoding (Address → LatLng via Geoapify)
