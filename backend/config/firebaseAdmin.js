@@ -1,4 +1,7 @@
-import admin from "firebase-admin";
+// firebase-admin v12+ dropped the old namespaced admin.credential/admin.auth()
+// API from its default export in favor of modular subpath imports.
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 let initialized = false;
 
@@ -20,9 +23,9 @@ const ensureInitialized = () => {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
   }
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.cert(serviceAccount),
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert(serviceAccount),
     });
   }
 
@@ -34,5 +37,5 @@ const ensureInitialized = () => {
 // email/name — never trust an email the client sends in a request body.
 export const verifyFirebaseIdToken = async (idToken) => {
   ensureInitialized();
-  return admin.auth().verifyIdToken(idToken);
+  return getAuth().verifyIdToken(idToken);
 };
